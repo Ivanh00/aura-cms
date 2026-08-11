@@ -24,3 +24,4 @@ tests/Browser/Screenshots/
 /.claude/worktrees
 /.agents
 teamwork-skill.zip
+/.playwright-mcp
