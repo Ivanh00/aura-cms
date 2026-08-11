@@ -333,7 +333,11 @@ class Aura
     {
         // Necessary to add TeamIds?
 
-        return Cache::remember('user-'.auth()->id().'-'.auth()->user()->current_team_id.'-navigation', 3600, function () {
+        // Cache plain arrays only. With cache.serializable_classes=false (common
+        // hardening default), Collection payloads become __PHP_Incomplete_Class
+        // and the sidebar foreach treats property values as group lists — strings
+        // then blow up with "foreach() argument must be of type array|object".
+        $payload = Cache::remember('user-'.auth()->id().'-'.auth()->user()->current_team_id.'-navigation', 3600, function () {
 
             $resources = collect($this->getResources());
 
@@ -390,8 +394,20 @@ class Aura
                 return $carry;
             }, []);
 
-            return collect($grouped)->groupBy('group');
+            return collect($grouped)
+                ->groupBy('group')
+                ->map(fn ($group) => $group->values()->all())
+                ->all();
         });
+
+        // Revive incomplete/legacy Collection payloads written before this fix.
+        if (! is_array($payload)) {
+            Cache::forget('user-'.auth()->id().'-'.auth()->user()->current_team_id.'-navigation');
+
+            return $this->navigation();
+        }
+
+        return collect($payload);
     }
 
     public function option($key)

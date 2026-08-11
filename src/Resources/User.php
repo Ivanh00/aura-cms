@@ -478,81 +478,52 @@ class User extends Resource implements AuthenticatableContract, AuthorizableCont
         if (substr($option, -1) == '*') {
             $o = substr($option, 0, -1);
 
-            // Cache
+            // Cache plain arrays (not Eloquent Collections) for serializable_classes=false.
             $options = Cache::remember($option, now()->addHour(), function () use ($o) {
-                return Option::where('name', 'like', $o.'%')->get();
+                return Option::where('name', 'like', $o.'%')->get()
+                    ->mapWithKeys(function ($item) {
+                        return [str($item->name)->afterLast('.')->toString() => $item->value];
+                    })
+                    ->all();
             });
 
-            // Map the options, set the key to the option name (everything after last dot ".") and the value to the option value
-            return $options->mapWithKeys(function ($item, $key) {
-                return [str($item->name)->afterLast('.')->toString() => $item->value];
-            });
+            return collect(is_array($options) ? $options : []);
         }
 
-        // Cache
-        $model = Cache::remember($option, now()->addHour(), function () use ($option) {
-            return Option::whereName($option)->first();
+        // Cache the option value only — never the Option model instance.
+        return Cache::remember($option, now()->addHour(), function () use ($option) {
+            return Option::whereName($option)->value('value');
         });
-
-        if ($model) {
-            return $model->value;
-        }
     }
 
     public function getOptionBookmarks()
     {
-        // Cache
-        $option = Cache::remember('user.'.$this->id.'.bookmarks', now()->addHour(), function () {
-            return Option::whereName('user.'.$this->id.'.bookmarks')->first();
-        });
-
-        if ($option) {
-            return $option->value;
-        }
-
-        return [];
+        return Cache::remember('user.'.$this->id.'.bookmarks', now()->addHour(), function () {
+            return Option::whereName('user.'.$this->id.'.bookmarks')->value('value') ?? [];
+        }) ?? [];
     }
 
     public function getOptionColumns($slug)
     {
-        // Cache
-        $option = Cache::remember('user.'.$this->id.'.columns.'.$slug, now()->addHour(), function () use ($slug) {
-            return Option::whereName('user.'.$this->id.'.columns.'.$slug)->first();
-        });
-
-        if ($option) {
-            return $option->value;
-        }
-
-        return [];
+        return Cache::remember('user.'.$this->id.'.columns.'.$slug, now()->addHour(), function () use ($slug) {
+            return Option::whereName('user.'.$this->id.'.columns.'.$slug)->value('value') ?? [];
+        }) ?? [];
     }
 
     public function getOptionSidebar()
     {
-        // Cache
-        $option = Cache::remember('user.'.$this->id.'.sidebar', now()->addHour(), function () {
-            return Option::whereName('user.'.$this->id.'.sidebar')->first();
-        });
-
-        if ($option) {
-            return $option->value;
-        }
-
-        return [];
+        return Cache::remember('user.'.$this->id.'.sidebar', now()->addHour(), function () {
+            return Option::whereName('user.'.$this->id.'.sidebar')->value('value') ?? [];
+        }) ?? [];
     }
 
     public function getOptionSidebarToggled()
     {
-        // Cache
-        $option = Cache::remember('user.'.$this->id.'.sidebarToggled', now()->addHour(), function () {
-            return Option::whereName('user.'.$this->id.'.sidebarToggled')->first();
+        $value = Cache::remember('user.'.$this->id.'.sidebarToggled', now()->addHour(), function () {
+            return Option::whereName('user.'.$this->id.'.sidebarToggled')->value('value');
         });
 
-        if ($option) {
-            return $option->value;
-        }
-
-        return true;
+        return $value ?? true;
     }
 
     // public function getRolesField()
@@ -578,23 +549,47 @@ class User extends Resource implements AuthenticatableContract, AuthorizableCont
     public function getTeams()
     {
         if (! config('aura.teams')) {
-            return;
+            return collect();
         }
 
-        // A Global Admin sees every team in the switcher, not only the teams they
-        // are a member of — visitation lets them enter any of them. The list is
-        // identical for every Global Admin, so it is cached under one shared key
-        // that Team create/delete invalidates (see Team::booted).
+        $teamClass = config('aura.resources.team');
+
+        // Cache IDs only — never Eloquent Collections. With
+        // cache.serializable_classes=false, model/collection payloads become
+        // __PHP_Incomplete_Class and the team switcher fatals on ->count().
         if ($this->isAuraGlobalAdmin()) {
-            return Cache::remember(self::GLOBAL_ADMIN_TEAMS_CACHE_KEY, now()->addHour(), function () {
-                return app(config('aura.resources.team'))::withoutGlobalScopes()->with('meta')->get();
+            $ids = Cache::remember(self::GLOBAL_ADMIN_TEAMS_CACHE_KEY, now()->addHour(), function () use ($teamClass) {
+                return $teamClass::withoutGlobalScopes()->orderBy('id')->pluck('id')->all();
             });
+
+            if (! is_array($ids) || $ids === []) {
+                if (! is_array($ids)) {
+                    Cache::forget(self::GLOBAL_ADMIN_TEAMS_CACHE_KEY);
+                }
+
+                return $teamClass::withoutGlobalScopes()->newCollection();
+            }
+
+            return $teamClass::withoutGlobalScopes()
+                ->with('meta')
+                ->whereIn((new $teamClass)->getKeyName(), $ids)
+                ->orderBy('id')
+                ->get();
         }
 
-        // Return cached teams with meta
-        return Cache::remember('user.'.$this->id.'.teams', now()->addHour(), function () {
-            return $this->teams()->with('meta')->get();
+        $ids = Cache::remember('user.'.$this->id.'.teams', now()->addHour(), function () {
+            return $this->teams()->pluck('teams.id')->all();
         });
+
+        if (! is_array($ids) || $ids === []) {
+            if (! is_array($ids)) {
+                Cache::forget('user.'.$this->id.'.teams');
+            }
+
+            return $this->teams()->getModel()->newCollection();
+        }
+
+        return $this->teams()->with('meta')->whereIn('teams.id', $ids)->get();
     }
 
     public static function getWidgets(): array

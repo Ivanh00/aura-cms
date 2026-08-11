@@ -36,7 +36,11 @@ Route::middleware('guest')->name('aura.')->group(function () {
             abort(404);
         }
 
-        $user = app(config('aura.resources.user'))->findOrFail($id);
+        // Bypass TeamScope: guests have no current team, and fail-closed
+        // scoping would hide every user (404) before Auth::login can run.
+        $user = app(config('aura.resources.user'))
+            ->newQueryWithoutScopes()
+            ->findOrFail($id);
 
         Auth::login($user);
 
