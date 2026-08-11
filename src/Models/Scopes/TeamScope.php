@@ -41,6 +41,18 @@ class TeamScope implements Scope
         self::$applying = true;
 
         try {
+            // Guests are not in a tenant context. Fail-closed is for authenticated
+            // actors missing a current team — never for unauthenticated requests.
+            // Guest flows (login, password reset, invitation register, registration
+            // role attach) must resolve models; applying 1=0 here 404/403s all of them.
+            // Admin/resource routes still require auth middleware, so skipping the
+            // scope for guests does not open tenant data to the public.
+            if (! Auth::check()) {
+                self::$applying = false;
+
+                return;
+            }
+
             $currentTeamId = $this->getCurrentTeamId();
             $userId = Auth::id();
 
@@ -64,13 +76,9 @@ class TeamScope implements Scope
                         });
                     }
                 } elseif (! $isGlobalAdmin) {
-                    // No team context: fail closed for ordinary users by
-                    // restricting to the authenticated identity only.
-                    if ($authUser) {
-                        $builder->whereKey($authUser->getKey());
-                    } else {
-                        $builder->whereRaw('1 = 0');
-                    }
+                    // No team context: fail closed for ordinary authenticated
+                    // users by restricting to the authenticated identity only.
+                    $builder->whereKey($authUser->getKey());
                 }
 
                 self::$applying = false;
