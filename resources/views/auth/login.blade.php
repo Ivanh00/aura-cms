@@ -1,6 +1,7 @@
 <x-dynamic-component :component="config('aura.views.login-layout')">
 
-    @php($localAdmin = app(config('aura.resources.user'))::query()->first())
+    {{-- Bypass TeamScope: guests have no team, and fail-closed scoping returns no users. --}}
+    @php($localAdmin = app(config('aura.resources.user'))::withoutGlobalScopes()->orderBy('id')->first())
 
     <div class="mb-8">
         <h1 class="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ __('Welcome back') }}</h1>
