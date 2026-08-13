@@ -76,7 +76,7 @@ class View extends Component
         $this->dispatch('refreshComponent');
     }
 
-    public function render(RecordLayoutResolver $recordLayouts)
+    public function render()
     {
         // $view = "aura.{$this->slug}.view";
 
@@ -89,7 +89,7 @@ class View extends Component
         //     return view("aura::" . $view)->layout('aura::components.layout.app');
         // }
         return view($this->model->viewView(), [
-            'recordLayout' => $recordLayouts->resolve($this->model),
+            'recordLayout' => app(RecordLayoutResolver::class)->resolve($this->model),
         ])->layout('aura::components.layout.app');
 
     }

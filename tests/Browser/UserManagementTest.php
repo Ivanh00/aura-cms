@@ -4,6 +4,7 @@ use Aura\Base\Resources\Role;
 use Aura\Base\Resources\Team;
 use Aura\Base\Resources\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 require_once __DIR__.'/Support/helpers.php';
 
@@ -124,20 +125,46 @@ test('a Global Admin sees users across all teams where a plain Super Admin does 
 });
 
 test('a Global Admin sees a team they are not a member of in the team switcher', function () {
-    $foreign = Team::factory()->createQuietly([
-        'name' => 'Distant Tenant',
-        'user_id' => User::factory()->create()->id,
-    ]);
-
     $ga = browserGlobalAdmin('ga-password');
     $this->actingAs($ga);
 
+    // createQuietly skips Team model events (and the shared switcher cache
+    // invalidation). Clear the cache so getTeams() rebuilds with this row.
+    Team::factory()->createQuietly([
+        'name' => 'Distant Tenant',
+        'user_id' => User::factory()->create()->id,
+    ]);
+    Cache::forget(User::GLOBAL_ADMIN_TEAMS_CACHE_KEY);
+
+    expect($ga->fresh()->isAuraGlobalAdmin())->toBeTrue()
+        ->and($ga->fresh()->getTeams()->pluck('name')->all())->toContain('Distant Tenant');
+
     $page = visit('/admin');
 
-    // Open the sidebar team switcher popover (same affordance LoginTest uses).
+    // Wait for package JS (window.tippy) before opening the switcher popover.
+    // Playwright evaluate resolves returned Promises.
+    $page->script(<<<'JS'
+        new Promise((resolve, reject) => {
+            let n = 0;
+            const tick = () => {
+                if (typeof window.tippy === 'function') {
+                    resolve(true);
+                    return;
+                }
+                if (n++ > 100) {
+                    reject(new Error('window.tippy never became available'));
+                    return;
+                }
+                setTimeout(tick, 20);
+            };
+            tick();
+        })
+    JS);
+
     $page->click('.aura-sidebar-team-switcher')->wait(1);
 
     // Visitation: a Global Admin can enter any team, so the switcher lists a team
     // they hold no Membership in.
-    $page->assertSee('Distant Tenant');
+    $page->assertSee('Switch Teams')
+        ->assertSee('Distant Tenant');
 });

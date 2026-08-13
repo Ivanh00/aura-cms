@@ -14,50 +14,82 @@ beforeEach(function () {
     $this->actingAs($this->user = createSuperAdmin());
 });
 
-it('fails closed for tenant models when the user has no current team', function () {
-    $teamId = $this->user->current_team_id;
-
-    Post::withoutGlobalScope(TeamScope::class)->create([
+it('scopes tenant models according to the teams feature flag', function () {
+    $attributes = [
         'title' => 'Tenant Post',
         'type' => 'Post',
         'status' => 'publish',
-        'team_id' => $teamId,
-    ]);
+    ];
 
-    // Clear team context without logging out.
-    DB::table('users')->where('id', $this->user->id)->update(['current_team_id' => null]);
-    Cache::forget(User::currentTeamCacheKey($this->user->id));
-    $this->user->refresh();
+    if (config('aura.teams')) {
+        $attributes['team_id'] = $this->user->current_team_id;
 
-    expect(Post::query()->count())->toBe(0)
-        ->and(Post::query()->toSql())->toContain('1 = 0');
+        Post::withoutGlobalScope(TeamScope::class)->create($attributes);
+
+        // Clear team context without logging out.
+        DB::table('users')->where('id', $this->user->id)->update(['current_team_id' => null]);
+        Cache::forget(User::currentTeamCacheKey($this->user->id));
+        $this->user->refresh();
+
+        // Teams on + no current team: fail closed — never return unscoped rows.
+        expect(Post::query()->count())->toBe(0)
+            ->and(Post::query()->toSql())->toContain('1 = 0');
+
+        return;
+    }
+
+    // Teams off: TeamScope is a no-op (no team columns / no tenant filter).
+    Post::withoutGlobalScope(TeamScope::class)->create($attributes);
+
+    expect(Post::query()->count())->toBe(1)
+        ->and(Post::query()->toSql())->not->toContain('1 = 0');
 });
 
-it('restricts non-global-admin user queries to self when no current team is set', function () {
+it('scopes user queries according to the teams feature flag when team context is absent', function () {
     $other = User::factory()->create();
 
-    DB::table('users')->where('id', $this->user->id)->update(['current_team_id' => null]);
-    Cache::forget(User::currentTeamCacheKey($this->user->id));
-    $this->user->refresh();
+    if (config('aura.teams')) {
+        DB::table('users')->where('id', $this->user->id)->update(['current_team_id' => null]);
+        Cache::forget(User::currentTeamCacheKey($this->user->id));
+        $this->user->refresh();
 
+        // Ordinary authenticated user with no team: only their own row.
+        $ids = User::query()->pluck('id')->all();
+
+        expect($ids)->toBe([$this->user->id])
+            ->and($ids)->not->toContain($other->id);
+
+        return;
+    }
+
+    // Teams off: no self-only restriction from TeamScope.
     $ids = User::query()->pluck('id')->all();
 
-    expect($ids)->toBe([$this->user->id])
-        ->and($ids)->not->toContain($other->id);
+    expect($ids)->toContain($this->user->id)
+        ->and($ids)->toContain($other->id)
+        ->and(User::query()->toSql())->not->toContain('1 = 0');
 });
 
-it('fails closed for Role queries when the user has no current team', function () {
-    // Ensure the catalog has at least one global role from bootstrap/seeding.
+it('scopes Role queries according to the teams feature flag when team context is absent', function () {
+    // Catalog always has at least one role from bootstrap/seeding (or attach-don't-mint).
     expect(Role::withoutGlobalScope(TeamScope::class)->count())->toBeGreaterThan(0);
 
-    DB::table('users')->where('id', $this->user->id)->update(['current_team_id' => null]);
-    Cache::forget(User::currentTeamCacheKey($this->user->id));
-    $this->user->refresh();
+    if (config('aura.teams')) {
+        DB::table('users')->where('id', $this->user->id)->update(['current_team_id' => null]);
+        Cache::forget(User::currentTeamCacheKey($this->user->id));
+        $this->user->refresh();
 
-    expect(Role::query()->count())->toBe(0)
-        ->and(Role::query()->toSql())->toContain('1 = 0');
+        // Teams on + no current team: refuse the role catalog rather than leak it.
+        expect(Role::query()->count())->toBe(0)
+            ->and(Role::query()->toSql())->toContain('1 = 0');
+
+        return;
+    }
+
+    // Teams off: roles remain queryable without a tenant fail-closed clause.
+    expect(Role::query()->count())->toBeGreaterThan(0)
+        ->and(Role::query()->toSql())->not->toContain('1 = 0');
 });
-
 it('rejects table filters with an unknown operator via fail-closed default', function () {
     $harness = new class
     {

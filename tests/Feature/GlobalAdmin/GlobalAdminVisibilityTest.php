@@ -151,8 +151,10 @@ describe('Teams-off mode', function () {
         $ga = createGlobalAdmin();
         $this->actingAs($ga);
 
+        // getTeams() returns an empty collection (not null) so call sites like
+        // getTeams()->count() stay safe when teams are disabled.
         expect($ga->isAuraGlobalAdmin())->toBeTrue()
-            ->and($ga->getTeams())->toBeNull()
+            ->and($ga->getTeams())->toBeEmpty()
             ->and($ga->currentTeam())->toBeNull();
     });
 });

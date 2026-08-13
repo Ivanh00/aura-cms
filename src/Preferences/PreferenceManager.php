@@ -2,7 +2,7 @@
 
 namespace Aura\Base\Preferences;
 
-use Aura\Base\Aura;
+use Aura\Base\Facades\Aura;
 use Aura\Base\Resources\Team;
 use Aura\Base\Resources\User;
 use InvalidArgumentException;

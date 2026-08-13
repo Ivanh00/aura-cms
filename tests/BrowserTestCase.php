@@ -72,21 +72,39 @@ class BrowserTestCase extends TestCase
      * Mirror what `artisan vendor:publish --tag=aura-assets` does, via
      * symlinks into the isolated testbench public path, so the browser
      * gets the package's real CSS/JS.
+     *
+     * Must be race-safe under parallel workers: a peer may create the
+     * vendor/aura directory before the symlinks exist. Returning early on
+     * is_dir() alone leaves tippy/window.aura undefined and breaks popovers.
      */
     private function serveBuiltAssets(): void
     {
         $base = dirname(__DIR__).'/resources';
         $target = public_path('vendor/aura');
 
-        if (is_dir($target)) {
-            return;
+        if (! is_dir($base.'/dist/assets')) {
+            throw new \RuntimeException(
+                'Browser tests need built frontend assets at resources/dist. Run `npm run build`.'
+            );
         }
 
         @mkdir($target, 0755, true);
 
-        @symlink($base.'/dist/assets', $target.'/assets');
-        @symlink($base.'/dist/manifest.json', $target.'/manifest.json');
-        @symlink($base.'/libs', $target.'/libs');
-        @symlink($base.'/public', $target.'/public');
+        $links = [
+            'assets' => $base.'/dist/assets',
+            'manifest.json' => $base.'/dist/manifest.json',
+            'libs' => $base.'/libs',
+            'public' => $base.'/public',
+        ];
+
+        foreach ($links as $name => $source) {
+            $link = $target.DIRECTORY_SEPARATOR.$name;
+
+            if (file_exists($link) || is_link($link)) {
+                continue;
+            }
+
+            @symlink($source, $link);
+        }
     }
 }

@@ -26,31 +26,47 @@
     <div x-data="{
       open: false,
       init() {
-        // when the component is initialized, add a click event listener to the document
+        // Tippy is attached on window by the package app.js entry. Alpine may
+        // boot before that script finishes evaluating under slow/parallel
+        // asset loads — wait for window.tippy instead of throwing ReferenceError.
         this.$nextTick(() => {
-          tippy(this.$refs.this, {
-            arrow: false,
-            theme: 'aura-small',
-            trigger: 'click',
-            offset: [0, 8],
-            placement: 'top-start',
-            content: @js((string)$slot),
-            allowHTML: true,
-            interactive: true,
-            onShow: (instance) => {
-              this.open = true;
-            },
-            onHide: (instance) => {
-              this.open = false;
-            },
-          });
+          const mount = (attempts = 0) => {
+            const tippyFn = window.tippy;
 
-          this.$refs.this.addEventListener('keydown', (event) => {
-            if (event.key === ' ' || event.key === 'Enter') {
-              event.preventDefault();
-              this.$refs.this.click();
+            if (typeof tippyFn !== 'function') {
+              if (attempts < 50) {
+                setTimeout(() => mount(attempts + 1), 20);
+              }
+
+              return;
             }
-          });
+
+            tippyFn(this.$refs.this, {
+              arrow: false,
+              theme: 'aura-small',
+              trigger: 'click',
+              offset: [0, 8],
+              placement: 'top-start',
+              content: @js((string)$slot),
+              allowHTML: true,
+              interactive: true,
+              onShow: (instance) => {
+                this.open = true;
+              },
+              onHide: (instance) => {
+                this.open = false;
+              },
+            });
+
+            this.$refs.this.addEventListener('keydown', (event) => {
+              if (event.key === ' ' || event.key === 'Enter') {
+                event.preventDefault();
+                this.$refs.this.click();
+              }
+            });
+          };
+
+          mount();
         });
       }
     }">
