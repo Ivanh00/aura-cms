@@ -1,5 +1,6 @@
 <?php
 
+use Aura\Base\Aura;
 use Aura\Base\Resource;
 use Aura\Base\Widgets\Donut;
 use Aura\Base\Widgets\Pie;
@@ -90,6 +91,30 @@ class CustomTableWidgetModel extends Resource
     }
 }
 
+class CustomTableStatusWidgetModel extends CustomTableWidgetModel
+{
+    public static ?string $slug = 'widget-status-project';
+
+    public static string $type = 'WidgetStatusProject';
+
+    public static function getFields()
+    {
+        return [
+            [
+                'name' => 'Status',
+                'type' => 'Aura\\Base\\Fields\\Status',
+                'validation' => '',
+                'conditional_logic' => [],
+                'slug' => 'status',
+                'options' => [
+                    ['key' => 'active', 'value' => 'Active'],
+                    ['key' => 'draft', 'value' => 'Draft'],
+                ],
+            ],
+        ];
+    }
+}
+
 test('value widget aggregates a meta-backed field on a custom table resource', function () {
     $widgetTest = Livewire::test(ValueWidget::class, [
         'widget' => ['method' => 'sum', 'column' => 'score', 'name' => 'Score Sum', 'slug' => 'score_sum'],
@@ -131,4 +156,20 @@ test('donut widget aggregates deterministic table-column distribution on a custo
     expect($widget->getValue($widget->start, $widget->end))
         ->toBe(['active' => 2, 'draft' => 1])
         ->not->toHaveKey('tag-1');
+});
+
+test('pie widget groups a physical status column without throwing', function () {
+    app(Aura::class)->registerResources([CustomTableStatusWidgetModel::class]);
+
+    $widgetTest = Livewire::test(Pie::class, [
+        'widget' => ['method' => 'count', 'column' => 'status', 'name' => 'Status Pie', 'slug' => 'status_pie'],
+        'model' => new CustomTableStatusWidgetModel,
+    ])
+        ->set('start', Carbon::now()->subDays(30))
+        ->set('end', Carbon::now());
+
+    $widget = $widgetTest->instance();
+
+    expect($widget->getValue($widget->start, $widget->end))
+        ->toBe(['Active' => 2, 'Draft' => 1]);
 });

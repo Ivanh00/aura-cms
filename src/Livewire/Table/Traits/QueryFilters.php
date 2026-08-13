@@ -107,6 +107,12 @@ trait QueryFilters
     protected function applyFilterGroup(Builder $query, array $group): void
     {
         foreach ($group['filters'] as $filterIndex => $filter) {
+            if (! is_array($filter)) {
+                $query->whereRaw('1 = 0');
+
+                continue;
+            }
+
             if ($this->isValidFilter($filter)) {
                 if ($filterIndex > 0) {
                     $groupOperator = $filter['main_operator'] ?? 'and';
@@ -114,7 +120,18 @@ trait QueryFilters
                 } else {
                     $this->applyFilter($query, $filter, 'and');
                 }
+
+                continue;
             }
+
+            // Blank UI rows and cleared values (name + operator, no value)
+            // are inactive filters. Anything else invalid is treated as
+            // tampering and must fail closed.
+            if ($this->isInactiveOrPlaceholderFilter($filter)) {
+                continue;
+            }
+
+            $query->whereRaw('1 = 0');
         }
     }
 
@@ -401,6 +418,40 @@ trait QueryFilters
         }
 
         return $query;
+    }
+
+    protected function isEmptyPlaceholderFilter(array $filter): bool
+    {
+        $name = $filter['name'] ?? '';
+        $operator = $filter['operator'] ?? '';
+        $value = $filter['value'] ?? '';
+
+        $blankName = $name === null || $name === '';
+        $blankOperator = $operator === null || $operator === '';
+        $blankValue = $value === null || $value === '' || $value === [];
+
+        return $blankName && $blankOperator && $blankValue;
+    }
+
+    protected function isInactiveOrPlaceholderFilter(array $filter): bool
+    {
+        if ($this->isEmptyPlaceholderFilter($filter)) {
+            return true;
+        }
+
+        $operator = $filter['operator'] ?? '';
+
+        if (! is_string($operator) || $operator === '') {
+            return false;
+        }
+
+        if (in_array($operator, ['is_empty', 'is_not_empty'], true)) {
+            return false;
+        }
+
+        $value = $filter['value'] ?? '';
+
+        return $value === null || $value === '' || $value === [];
     }
 
     protected function isRelationBackedFilter(array $filter): bool

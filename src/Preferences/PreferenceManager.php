@@ -5,20 +5,21 @@ namespace Aura\Base\Preferences;
 use Aura\Base\Facades\Aura;
 use Aura\Base\Resources\Team;
 use Aura\Base\Resources\User;
+use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 
 /**
  * Lightweight preference store backed by existing User/Team Option helpers.
  *
  * Intentionally small: typed registry + explicit context + simple persistence.
- * Does not include the multi-tenant option-identity hardening stack from the
+ * Does not include the option-identity hardening stack from the
  * experimental mega-branch.
  */
 final class PreferenceManager
 {
     public function __construct(private PreferenceRegistry $registry) {}
 
-    public function get(string $key, PreferenceContext $context): mixed
+    public function get(string $key, PreferenceContext $context): bool|int|float|string|array|null
     {
         return $this->resolve($key, $context)->value;
     }
@@ -98,7 +99,7 @@ final class PreferenceManager
 
     public function set(
         string $key,
-        mixed $value,
+        bool|int|float|string|array|null $value,
         PreferenceScope $scope,
         PreferenceContext $context,
         ?User $actor,
@@ -131,7 +132,7 @@ final class PreferenceManager
 
     private function assertEveryoneWrite(User $actor): void
     {
-        if (! method_exists($actor, 'isAuraGlobalAdmin') || ! $actor->isAuraGlobalAdmin()) {
+        if (! Gate::forUser($actor)->allows(User::GLOBAL_ADMIN_GATE)) {
             throw new InvalidArgumentException('Everyone preferences require a global admin actor.');
         }
     }
@@ -142,13 +143,15 @@ final class PreferenceManager
             throw new InvalidArgumentException('Team preferences require a team context.');
         }
 
-        if (method_exists($actor, 'isAuraGlobalAdmin') && $actor->isAuraGlobalAdmin()) {
+        if (Gate::forUser($actor)->allows(User::GLOBAL_ADMIN_GATE)) {
             return;
         }
 
-        if ((string) ($context->team->user_id ?? '') !== (string) $actor->getKey()) {
-            throw new InvalidArgumentException('Team preferences can only be changed by the team owner.');
+        if (Gate::forUser($actor)->allows('update', $context->team)) {
+            return;
         }
+
+        throw new InvalidArgumentException('Team preferences can only be changed by the team owner.');
     }
 
     private function assertUserWrite(PreferenceContext $context, User $actor): void
@@ -167,15 +170,21 @@ final class PreferenceManager
         return 'preference.'.$key;
     }
 
-    private function readScope(PreferenceScope $scope, string $optionKey, PreferenceContext $context): mixed
+    private function readScope(PreferenceScope $scope, string $optionKey, PreferenceContext $context): bool|int|float|string|array|null
     {
-        return match ($scope) {
+        $value = match ($scope) {
             PreferenceScope::User => $context->user?->getOption($optionKey),
             PreferenceScope::Team => $context->team instanceof Team
                 ? $context->team->getOption($optionKey)
                 : null,
             PreferenceScope::Everyone => Aura::getOption('preference.everyone.'.$optionKey),
         };
+
+        if (! is_bool($value) && ! is_int($value) && ! is_float($value) && ! is_string($value) && ! is_array($value) && $value !== null) {
+            return null;
+        }
+
+        return $value;
     }
 
     /**
@@ -194,7 +203,7 @@ final class PreferenceManager
     private function writeScope(
         PreferenceScope $scope,
         string $optionKey,
-        mixed $value,
+        bool|int|float|string|array|null $value,
         PreferenceContext $context,
         bool $delete = false,
     ): void {

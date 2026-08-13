@@ -9,6 +9,8 @@ use Aura\Base\Reporting\AggregateEngine;
 use Aura\Base\Reporting\AggregateOperation;
 use Aura\Base\Reporting\DateRange;
 use Aura\Base\Resource;
+use DateTimeInterface;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Locked;
@@ -26,7 +28,7 @@ class ValueWidget extends Widget
     #[Locked]
     public $widget;
 
-    public function getValue($start, $end)
+    public function getValue(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end): int|float|string|null
     {
         $column = optional($this->widget)['column'];
 
@@ -50,7 +52,7 @@ class ValueWidget extends Widget
         return $this->legacyValue($start, $end, $column);
     }
 
-    public function getValuesProperty()
+    public function getValuesProperty(): array
     {
         $currentStart = $this->start instanceof Carbon ? $this->start : Carbon::parse($this->start);
         $currentEnd = $this->end instanceof Carbon ? $this->end : Carbon::parse($this->end);
@@ -76,20 +78,20 @@ class ValueWidget extends Widget
         });
     }
 
-    public function mount()
+    public function mount(): void
     {
         if (optional($this->widget)['method']) {
             $this->method = $this->widget['method'];
         }
     }
 
-    public function render()
+    public function render(): View
     {
         return view('aura::components.widgets.value');
     }
 
     #[On('dateFilterUpdated')]
-    public function updateDateRange($start, $end)
+    public function updateDateRange(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end): void
     {
         $this->start = $start;
         $this->end = $end;
@@ -128,7 +130,7 @@ class ValueWidget extends Widget
             && $this->model->fieldClassBySlug($column) instanceof Number;
     }
 
-    protected function legacyValue($start, $end, ?string $column)
+    protected function legacyValue(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end, ?string $column): int|float|string|null
     {
         $isMetaColumn = $column && $this->model->isMetaField($column);
 

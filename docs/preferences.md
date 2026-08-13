@@ -71,11 +71,9 @@ For resource-aware keys, resolution is deterministic:
 3. declared default
 
 Unsupported scopes and missing context subjects are skipped during reads. Writes reject unsupported scopes.
-Everyone scope is optional per declaration. With teams enabled it uses the reserved option ownership
-`team_id = 0`; Team and user model writes reject that identity, and TeamScope fails closed if a persisted
-current-team pointer contains it. Normal tenant queries therefore cannot see the everyone row or become
-unscoped. Direct edits to reserved Option rows invalidate the global preference cache. This avoids a
-destructive schema migration and keeps the existing `(team_id, name)` uniqueness guarantee.
+Everyone scope is optional per declaration. It is stored via `Aura::getOption` / `Aura::updateOption`
+under `preference.everyone.{key}` (resource-aware keys append `.{resource}`). User and team scopes use
+the existing `User`/`Team` option helpers under `preference.{key}` (or `preference.{key}.{resource}`).
 
 Team-scoped reads are skipped when teams are disabled, so resolution continues to everyone or the declared
 default. Team-scoped writes and resets are rejected before an option storage adapter is called.
@@ -83,11 +81,9 @@ default. Team-scoped writes and resets are rejected before an option storage ada
 ## Existing options and migration
 
 `User::getOption()`, `updateOption()`, and `deleteOption()` and their Team equivalents remain unchanged.
-Preference declarations may list `legacyKeys`, including `{application}` and `{resource}` placeholders.
-Aura reads the canonical hashed preference identity first, then those legacy names. New writes use only the
-canonical identity. Reset removes both the canonical row and declared aliases for that exact scope/context.
-No data migration is required; applications can migrate lazily as users change preferences.
+Preference declarations may list `legacyKeys`. Aura reads the canonical option key first, then those
+legacy names from the user option store. New writes use only the canonical option key. Reset stores
+null on that key for the requested scope. No data migration is required; applications can migrate
+lazily as users change preferences.
 
-The explicit low-level adapters `User::getOptionEntryForTeam()`, `updateOptionForTeam()`,
-`deleteOptionForTeam()`, and `Team::getOptionEntryExplicit()` exist for trusted services. They do not perform
-authorization themselves. Use `PreferenceManager` for user-triggered writes.
+Use `PreferenceManager` for user-triggered writes so scope authorization stays in one place.

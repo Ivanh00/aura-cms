@@ -9,19 +9,22 @@ use Aura\Base\Support\KanbanConfiguration;
  */
 trait Kanban
 {
-    public $kanbanStatuses = [];
+    /**
+     * @var array<string, array{value: string, color: string|null, visible: bool}>
+     */
+    public array $kanbanStatuses = [];
 
     public function mountKanban(): void
     {
         $this->prepareKanban();
     }
 
-    public function reorderKanbanColumns($newOrder): void
+    public function reorderKanbanColumns(array $newOrder): void
     {
         $this->reorderKanbanStatuses($newOrder);
     }
 
-    public function reorderKanbanStatuses(mixed $statuses, mixed $position = null): void
+    public function reorderKanbanStatuses(array|string|int $statuses, ?int $position = null): void
     {
         $declared = $this->declaredKanbanStatuses();
         $requested = $this->requestedKanbanStatusOrder($statuses, $position, $declared);
@@ -125,15 +128,14 @@ trait Kanban
      * @param  array<string, array{value: string, color: string|null, visible: bool}>  $declared
      * @return array<int, string|int>
      */
-    protected function requestedKanbanStatusOrder(mixed $statuses, mixed $position, array $declared): array
+    protected function requestedKanbanStatusOrder(array|string|int $statuses, ?int $position, array $declared): array
     {
         if (is_array($statuses)) {
             return $statuses;
         }
 
         if (
-            (! is_string($statuses) && ! is_int($statuses))
-            || ! is_int($position)
+            ! is_int($position)
             || $position < 0
             || ! array_key_exists((string) $statuses, $declared)
         ) {

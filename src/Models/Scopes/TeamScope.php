@@ -41,12 +41,12 @@ class TeamScope implements Scope
         self::$applying = true;
 
         try {
-            // Guests are not in a tenant context. Fail-closed is for authenticated
+            // Guests are not in a team context. Fail-closed is for authenticated
             // actors missing a current team — never for unauthenticated requests.
             // Guest flows (login, password reset, invitation register, registration
             // role attach) must resolve models; applying 1=0 here 404/403s all of them.
             // Admin/resource routes still require auth middleware, so skipping the
-            // scope for guests does not open tenant data to the public.
+            // scope for guests does not open team data to the public.
             if (! Auth::check()) {
                 self::$applying = false;
 
@@ -58,7 +58,7 @@ class TeamScope implements Scope
 
             // Handle User model specially
             if ($model->getTable() === 'users') {
-                // A Global Admin transcends the tenant boundary: their user
+                // A Global Admin transcends the team boundary: their user
                 // queries are never restricted to current-team members. The
                 // bypass is gated strictly on the authenticated user being a
                 // Global Admin, so it never leaks into ordinary requests.

@@ -178,3 +178,178 @@ it('denies policy abilities when actor and resource use different connections', 
         ->and($policy->restore($this->user, $resource))->toBeFalse()
         ->and($policy->forceDelete($this->user, $resource))->toBeFalse();
 });
+
+it('fails closed when a custom filter group contains a tampered filter', function () {
+    createPost(['title' => 'Visible Post']);
+
+    $harness = new class
+    {
+        use QueryFilters;
+
+        public $filters = [
+            'custom' => [
+                [
+                    'filters' => [
+                        [
+                            'name' => 'title',
+                            'operator' => '',
+                            'value' => 'Visible',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        public $model;
+
+        public function run(Builder $query): Builder
+        {
+            return $this->applyCustomFilter($query);
+        }
+    };
+
+    $query = Post::query();
+    $harness->run($query);
+
+    expect($query->toSql())->toContain('1 = 0')
+        ->and($query->count())->toBe(0);
+});
+
+it('skips cleared filter values without failing closed', function () {
+    createPost(['title' => 'Cleared Filter Post']);
+
+    $harness = new class
+    {
+        use QueryFilters;
+
+        public $filters = [
+            'custom' => [
+                [
+                    'filters' => [
+                        [
+                            'name' => 'title',
+                            'operator' => 'contains',
+                            'value' => null,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        public $model;
+
+        public function run(Builder $query): Builder
+        {
+            return $this->applyCustomFilter($query);
+        }
+    };
+
+    $query = Post::query();
+    $harness->run($query);
+
+    expect($query->toSql())->not->toContain('1 = 0')
+        ->and($query->count())->toBeGreaterThan(0);
+});
+
+it('skips completely empty placeholder filters without failing closed', function () {
+    createPost(['title' => 'Placeholder Post']);
+
+    $harness = new class
+    {
+        use QueryFilters;
+
+        public $filters = [
+            'custom' => [
+                [
+                    'filters' => [
+                        [
+                            'name' => '',
+                            'operator' => '',
+                            'value' => '',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        public $model;
+
+        public function run(Builder $query): Builder
+        {
+            return $this->applyCustomFilter($query);
+        }
+    };
+
+    $query = Post::query();
+    $harness->run($query);
+
+    expect($query->toSql())->not->toContain('1 = 0')
+        ->and($query->count())->toBeGreaterThan(0);
+});
+
+it('fails closed for operator-without-name and name-without-operator filters', function () {
+    createPost(['title' => 'Partial Filter Post']);
+
+    $operatorWithoutName = new class
+    {
+        use QueryFilters;
+
+        public $filters = [
+            'custom' => [
+                [
+                    'filters' => [
+                        [
+                            'name' => '',
+                            'operator' => 'contains',
+                            'value' => 'Partial',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        public $model;
+
+        public function run(Builder $query): Builder
+        {
+            return $this->applyCustomFilter($query);
+        }
+    };
+
+    $nameWithoutOperator = new class
+    {
+        use QueryFilters;
+
+        public $filters = [
+            'custom' => [
+                [
+                    'filters' => [
+                        [
+                            'name' => 'title',
+                            'operator' => '',
+                            'value' => '',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        public $model;
+
+        public function run(Builder $query): Builder
+        {
+            return $this->applyCustomFilter($query);
+        }
+    };
+
+    $operatorQuery = Post::query();
+    $operatorWithoutName->run($operatorQuery);
+
+    $nameQuery = Post::query();
+    $nameWithoutOperator->run($nameQuery);
+
+    expect($operatorQuery->toSql())->toContain('1 = 0')
+        ->and($operatorQuery->count())->toBe(0)
+        ->and($nameQuery->toSql())->toContain('1 = 0')
+        ->and($nameQuery->count())->toBe(0);
+});

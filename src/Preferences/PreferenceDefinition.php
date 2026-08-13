@@ -8,13 +8,13 @@ final readonly class PreferenceDefinition
 {
     /**
      * @param  array<int, PreferenceScope>  $scopes
-     * @param  array<int, mixed>  $allowedValues
+     * @param  array<int, bool|int|float|string|array|null>  $allowedValues
      * @param  array<int, string>  $legacyKeys
      */
     public function __construct(
         public string $key,
         public PreferenceValueType $type,
-        public mixed $default,
+        public bool|int|float|string|array|null $default,
         public array $scopes = [PreferenceScope::User, PreferenceScope::Team],
         public bool $nullable = false,
         public bool $resourceAware = false,
@@ -51,7 +51,7 @@ final readonly class PreferenceDefinition
         return in_array($scope, $this->scopes, true);
     }
 
-    public function validate(mixed $value): void
+    public function validate(bool|int|float|string|array|null $value): void
     {
         if ($value === null) {
             if ($this->nullable) {

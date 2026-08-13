@@ -8,6 +8,7 @@ use Aura\Base\Resource;
 use Aura\Base\Resources\Team;
 use Aura\Base\Resources\User;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 final readonly class RecordLayoutResolver
@@ -22,7 +23,7 @@ final readonly class RecordLayoutResolver
         $regions = [];
         $relationships = [];
         $preferenceValues = [];
-        $user = auth()->user();
+        $user = auth()->user() instanceof User ? auth()->user() : null;
         $preferenceContext = null;
 
         foreach ($this->registry->panelsFor($resource) as $registered) {
@@ -46,19 +47,23 @@ final readonly class RecordLayoutResolver
         return new RecordLayout($regions);
     }
 
-    private function authorized(RecordLayoutPanel $panel, Resource $resource, mixed $user): bool
+    private function authorized(RecordLayoutPanel $panel, Resource $resource, ?User $user): bool
     {
         if ($panel->ability === null) {
             return true;
         }
 
-        if (! $user instanceof User) {
+        if ($user === null) {
             return false;
         }
 
         try {
             return Gate::forUser($user)->allows($panel->ability, $resource);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::warning('Record layout authorization failed.', [
+                'message' => $e->getMessage(),
+            ]);
+
             return false;
         }
     }
@@ -66,7 +71,7 @@ final readonly class RecordLayoutResolver
     private function preferenceAllows(
         RecordLayoutPanel $panel,
         Resource $resource,
-        mixed $user,
+        ?User $user,
         ?PreferenceContext &$context,
         array &$resolved,
     ): bool {
@@ -81,16 +86,18 @@ final readonly class RecordLayoutResolver
             }
 
             return $resolved[$panel->preferenceKey] === true;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            Log::warning('Record layout preference check failed.', [
+                'message' => $e->getMessage(),
+            ]);
             $resolved[$panel->preferenceKey] = false;
 
             return false;
         }
     }
 
-    private function preferenceContext(Resource $resource, mixed $user): PreferenceContext
+    private function preferenceContext(Resource $resource, ?User $user): PreferenceContext
     {
-        $user = $user instanceof User ? $user : null;
         $team = null;
 
         if (config('aura.teams') && $user !== null) {

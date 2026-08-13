@@ -7,6 +7,7 @@ use Aura\Base\Contracts\DeclaresReportingQueryScopes;
 use Aura\Base\Fields\Boolean;
 use Aura\Base\Fields\Number;
 use Aura\Base\Fields\Select;
+use Aura\Base\Fields\Status;
 use Aura\Base\Fields\Text;
 use Aura\Base\Resource;
 use Aura\Base\Support\ExactDecimal;
@@ -55,7 +56,7 @@ final class ResourceAggregateEngine implements AggregateEngine
         return new AggregateResult($this->aggregate($query, $definition->operation, $metric));
     }
 
-    /** @param Builder<resource> $query */
+    /** @param Builder<\Aura\Base\Resource> $query */
     private function aggregate(Builder $query, AggregateOperation $operation, ?string $metric): int|string|null
     {
         $row = $this->aggregateSelect($query, $operation, $metric)->toBase()->first();
@@ -88,7 +89,7 @@ final class ResourceAggregateEngine implements AggregateEngine
         };
     }
 
-    /** @param Builder<resource> $query */
+    /** @param Builder<\Aura\Base\Resource> $query */
     private function aggregateSelect(Builder $query, AggregateOperation $operation, ?string $metric): Builder
     {
         $query->selectRaw('COUNT(*) as row_count');
@@ -108,7 +109,7 @@ final class ResourceAggregateEngine implements AggregateEngine
             ->selectRaw("MAX({$metric}) as scaled_max");
     }
 
-    /** @param Builder<resource> $query */
+    /** @param Builder<\Aura\Base\Resource> $query */
     private function applyQueryScope(Builder $query, Resource $resource, ?string $scope): void
     {
         if ($scope === null) {
@@ -128,7 +129,7 @@ final class ResourceAggregateEngine implements AggregateEngine
         $query->{$scope}();
     }
 
-    /** @param Builder<resource> $query */
+    /** @param Builder<\Aura\Base\Resource> $query */
     private function applyRange(Builder $query, Resource $resource, ?DateRange $range): void
     {
         if ($range === null) {
@@ -139,7 +140,7 @@ final class ResourceAggregateEngine implements AggregateEngine
             ->where($resource->qualifyColumn('created_at'), '<', $this->utc($range->end));
     }
 
-    /** @return Builder<resource> */
+    /** @return Builder<\Aura\Base\Resource> */
     private function authorizedQuery(Resource $resource): Builder
     {
         $query = $resource->newQuery();
@@ -211,7 +212,7 @@ final class ResourceAggregateEngine implements AggregateEngine
     }
 
     /**
-     * @param  Builder<resource>  $query
+     * @param  Builder<\Aura\Base\Resource>  $query
      * @return list<AggregatePoint>
      */
     private function bucketed(Builder $query, Resource $resource, AggregateDefinition $definition, ?string $metric): array
@@ -257,7 +258,7 @@ final class ResourceAggregateEngine implements AggregateEngine
     }
 
     /**
-     * @param  Builder<resource>  $query
+     * @param  Builder<\Aura\Base\Resource>  $query
      * @return list<AggregatePoint>
      */
     private function grouped(Builder $query, Resource $resource, AggregateDefinition $definition, ?string $metric): array
@@ -309,7 +310,7 @@ final class ResourceAggregateEngine implements AggregateEngine
         $field = $resource->fieldBySlug($slug);
         $class = $resource->fieldClassBySlug($slug);
 
-        if (! is_array($field) || ! ($class instanceof Boolean || $class instanceof Number || $class instanceof Select || $class instanceof Text)) {
+        if (! is_array($field) || ! ($class instanceof Boolean || $class instanceof Number || $class instanceof Select || $class instanceof Status || $class instanceof Text)) {
             throw new InvalidArgumentException('Reporting groups must be declared physical scalar fields.');
         }
 
@@ -399,7 +400,7 @@ final class ResourceAggregateEngine implements AggregateEngine
         return (int) $value;
     }
 
-    /** @param Builder<resource> $query */
+    /** @param Builder<\Aura\Base\Resource> $query */
     private function metricExpression(Builder $query, Resource $resource, AggregateDefinition $definition): ?string
     {
         if ($definition->operation === AggregateOperation::Count) {

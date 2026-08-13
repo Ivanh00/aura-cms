@@ -3,12 +3,18 @@
 namespace Aura\Base\Widgets;
 
 use Aura\Base\Aura;
+use Aura\Base\Fields\Boolean;
 use Aura\Base\Fields\Number;
+use Aura\Base\Fields\Select;
+use Aura\Base\Fields\Status;
+use Aura\Base\Fields\Text;
 use Aura\Base\Reporting\AggregateDefinition;
 use Aura\Base\Reporting\AggregateEngine;
 use Aura\Base\Reporting\AggregateOperation;
 use Aura\Base\Reporting\DateRange;
 use Aura\Base\Resource;
+use DateTimeInterface;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Locked;
@@ -26,7 +32,7 @@ class Donut extends Widget
     #[Locked]
     public $widget;
 
-    public function getValue($start, $end)
+    public function getValue(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end): array
     {
         $column = optional($this->widget)['column'];
 
@@ -62,7 +68,7 @@ class Donut extends Widget
         return $this->legacyValue($start, $end, $column);
     }
 
-    public function getValuesProperty()
+    public function getValuesProperty(): array
     {
         $currentStart = $this->start instanceof Carbon ? $this->start : Carbon::parse($this->start);
         $currentEnd = $this->end instanceof Carbon ? $this->end : Carbon::parse($this->end);
@@ -88,20 +94,20 @@ class Donut extends Widget
         });
     }
 
-    public function mount()
+    public function mount(): void
     {
         if (optional($this->widget)['method']) {
             $this->method = $this->widget['method'];
         }
     }
 
-    public function render()
+    public function render(): View
     {
         return view('aura::components.widgets.donut');
     }
 
     #[On('dateFilterUpdated')]
-    public function updateDateRange($start, $end)
+    public function updateDateRange(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end): void
     {
         $this->start = $start;
         $this->end = $end;
@@ -143,13 +149,24 @@ class Donut extends Widget
         $operation = $this->aggregateOperation();
 
         if ($operation === AggregateOperation::Count) {
-            return true;
+            return $this->isEngineGroupField($column);
         }
 
         return $this->model->fieldClassBySlug($column) instanceof Number;
     }
 
-    protected function legacyValue($start, $end, ?string $column)
+    protected function isEngineGroupField(string $column): bool
+    {
+        $fieldClass = $this->model->fieldClassBySlug($column);
+
+        return $fieldClass instanceof Boolean
+            || $fieldClass instanceof Number
+            || $fieldClass instanceof Select
+            || $fieldClass instanceof Status
+            || $fieldClass instanceof Text;
+    }
+
+    protected function legacyValue(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end, ?string $column): array
     {
         $table = $this->model->getTable();
 

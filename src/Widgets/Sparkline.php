@@ -10,7 +10,10 @@ use Aura\Base\Reporting\AggregateOperation;
 use Aura\Base\Reporting\DateBucket;
 use Aura\Base\Reporting\DateRange;
 use Aura\Base\Resource;
+use DateTimeInterface;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -27,12 +30,12 @@ class Sparkline extends Widget
     #[Locked]
     public $widget;
 
-    public function getCarbonDate($date)
+    public function getCarbonDate(Carbon|DateTimeInterface|string $date): Carbon
     {
         return $date instanceof Carbon ? $date : Carbon::parse($date);
     }
 
-    public function getValue($start, $end)
+    public function getValue(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end): Collection
     {
         $column = optional($this->widget)['column'];
 
@@ -67,7 +70,7 @@ class Sparkline extends Widget
         return $this->legacyValue($start, $end, $column);
     }
 
-    public function getValuesProperty()
+    public function getValuesProperty(): array
     {
         $currentStart = $this->getCarbonDate($this->start ?? now()->subDays(30)->startOfDay())->copy()->addDay();
         $currentEnd = $this->getCarbonDate($this->end ?? now()->endOfDay());
@@ -84,20 +87,20 @@ class Sparkline extends Widget
         ];
     }
 
-    public function mount()
+    public function mount(): void
     {
         if (optional($this->widget)['method']) {
             $this->method = $this->widget['method'];
         }
     }
 
-    public function render()
+    public function render(): View
     {
         return view('aura::components.widgets.sparkline-area');
     }
 
     #[On('dateFilterUpdated')]
-    public function updateDateRange($start, $end)
+    public function updateDateRange(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end): void
     {
         $this->start = $start;
         $this->end = $end;
@@ -137,8 +140,10 @@ class Sparkline extends Widget
             && $this->model->fieldClassBySlug($column) instanceof Number;
     }
 
-    protected function legacyValue($start, $end, ?string $column)
+    protected function legacyValue(Carbon|DateTimeInterface|string $start, Carbon|DateTimeInterface|string $end, ?string $column): Collection
     {
+        $start = $this->getCarbonDate($start);
+        $end = $this->getCarbonDate($end);
         $createdAtColumn = $this->model->getTable().'.created_at';
         $method = $this->method;
 
