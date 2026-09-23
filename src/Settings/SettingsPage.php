@@ -20,5 +20,7 @@ final readonly class SettingsPage
         public array $defaults = [],
         public array $secretFields = [],
         public array $secretContexts = [],
+        public ?string $viewAbility = null,
+        public ?string $updateAbility = null,
     ) {}
 }

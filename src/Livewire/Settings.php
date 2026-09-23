@@ -4,6 +4,7 @@ namespace Aura\Base\Livewire;
 
 use Aura\Base\Contracts\AiConnector;
 use Aura\Base\Settings\SettingsPage;
+use Aura\Base\Settings\SettingsPageAuthorizer;
 use Aura\Base\Settings\SettingsRegistry;
 use Aura\Base\Settings\SettingsStore;
 use Aura\Base\Traits\InputFields;
@@ -17,6 +18,8 @@ class Settings extends Component
     use MediaFields;
 
     public ?array $aiConnectionStatus = null;
+
+    public bool $canUpdate = false;
 
     public $form = [
         'fields' => [],
@@ -36,7 +39,10 @@ class Settings extends Component
 
     public function fieldsCollection()
     {
-        return collect($this->settingsPage()->fields);
+        return collect($this->settingsPage()->fields)
+            ->map(fn (array $field): array => $this->canUpdate
+                ? $field
+                : [...$field, 'disabled' => true]);
     }
 
     public static function generalFields()
@@ -497,13 +503,19 @@ class Settings extends Component
         });
     }
 
-    public function mount(SettingsRegistry $registry, SettingsStore $store, string $page = 'general')
-    {
+    public function mount(
+        SettingsPageAuthorizer $authorizer,
+        SettingsRegistry $registry,
+        SettingsStore $store,
+        string $page = 'general',
+    ) {
         abort_unless(config('aura.features.settings') && $registry->has($page), 404);
 
         $this->page = $page;
 
-        $this->authorizeAccess();
+        abort_unless($authorizer->canView($this->settingsPage(), auth()->user()), 403);
+
+        $this->canUpdate = $authorizer->canUpdate($this->settingsPage(), auth()->user());
 
         $valueString = [
             'darkmode-type' => config('aura.theme.darkmode-type'),
@@ -553,8 +565,13 @@ class Settings extends Component
         ]);
     }
 
-    public function save(SettingsRegistry $registry, SettingsStore $store): void
-    {
+    public function save(
+        SettingsPageAuthorizer $authorizer,
+        SettingsRegistry $registry,
+        SettingsStore $store,
+    ): void {
+        abort_unless($authorizer->canUpdate($this->settingsPage(), auth()->user()), 403);
+
         $this->validate();
 
         $secretFields = $this->settingsPage()->secretFields;
@@ -578,20 +595,13 @@ class Settings extends Component
         return app(SettingsRegistry::class)->page($this->page) ?? abort(404);
     }
 
-    public function testAiConnection(AiConnector $connector): void
+    public function testAiConnection(AiConnector $connector, SettingsPageAuthorizer $authorizer): void
     {
-        $this->authorizeAccess();
+        abort_unless($authorizer->canUpdate($this->settingsPage(), auth()->user()), 403);
 
         $result = $connector->testConnection();
         $this->aiConnectionStatus = $result->toArray();
 
         $this->dispatch('notify', message: $result->message, type: $result->successful ? 'success' : 'error');
-    }
-
-    private function authorizeAccess(): void
-    {
-        $user = auth()->user();
-
-        abort_unless($user && method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin(), 403);
     }
 }

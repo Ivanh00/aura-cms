@@ -7,6 +7,7 @@ use Aura\Base\Facades\DynamicFunctions;
 use Aura\Base\Listeners\CreateDatabaseMigration;
 use Aura\Base\Listeners\ModifyDatabaseMigration;
 use Aura\Base\Navigation\Navigation;
+use Aura\Base\Settings\SettingsPageAuthorizer;
 use Aura\Base\Settings\SettingsRegistry;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Validator;
@@ -56,7 +57,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Plugins register their pages after this provider boots, so resolve them when the sidebar renders.
         if (config('aura.features.settings')) {
-            app('hook_manager')->addHook('navigation', function ($navigation) use ($isSuperAdmin) {
+            app('hook_manager')->addHook('navigation', function ($navigation) {
                 foreach (app(SettingsRegistry::class)->pages() as $page) {
                     if ($page->slug === 'general') {
                         continue;
@@ -69,7 +70,9 @@ class AppServiceProvider extends ServiceProvider
                         'group' => 'settings',
                         'sort' => 301 + $page->order,
                         'route' => route('aura.settings.page', $page->slug),
-                        'conditional_logic' => $isSuperAdmin,
+                        'conditional_logic' => DynamicFunctions::add(
+                            fn () => app(SettingsPageAuthorizer::class)->canView($page, auth()->user())
+                        ),
                     ]);
                 }
 

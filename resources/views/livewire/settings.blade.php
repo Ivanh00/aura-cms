@@ -21,14 +21,16 @@
             @endif
         </div>
 
-        <div>
-            <x-aura::button wire:click="save">
-                <div wire:loading wire:target="save">
-                    <x-aura::icon.loading  />
-                </div>
-                {{ __('Save') }}
-            </x-aura::button>
-        </div>
+        @if($canUpdate)
+            <div>
+                <x-aura::button wire:click="save">
+                    <div wire:loading wire:target="save">
+                        <x-aura::icon.loading  />
+                    </div>
+                    {{ __('Save') }}
+                </x-aura::button>
+            </div>
+        @endif
     </div>
 
 
