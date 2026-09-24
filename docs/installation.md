@@ -82,7 +82,7 @@ To enable teams, change `--teams=false` to `--teams=true`. On the current main b
 
 ## What `aura:install` does
 
-The installer publishes Aura's two configuration files, compiled assets, and migrations. The assets go in `public/vendor/aura`. Depending on your answers to the prompts, it then updates the user model, applies your configuration choices, runs the migrations, and creates an administrator. The migration creates Aura's tables and adds the required columns to Laravel's existing users table.
+The installer publishes Aura's two configuration files, Laravel AI's `config/ai.php` when it is not already present, compiled assets, and Aura migrations. It does not publish Laravel AI's optional conversation migration. The assets go in `public/vendor/aura`. Depending on your answers to the prompts, it then updates the user model, applies your configuration choices, runs the migrations, and creates an administrator. The Aura migration creates Aura's tables and adds the required columns to Laravel's existing users table.
 
 The user model command, `aura:extend-user-model`, updates the standard Laravel model in `app/Models/User.php`. It expects the model to extend `Authenticatable`. If your application has a custom user model, update it manually to extend `Aura\Base\Resources\User` while preserving its existing contracts and behavior.
 

@@ -25,9 +25,10 @@
     ],
     "require": {
         "php": "^8.4",
-        "intervention/image": "^3.0",
         "illuminate/support": "^13.0",
+        "intervention/image": "^3.0",
         "lab404/laravel-impersonate": "^1.7.5",
+        "laravel/ai": "^1.0",
         "laravel/fortify": "^1.20",
         "laravel/prompts": "^0.3",
         "laravel/sanctum": "^4.0",

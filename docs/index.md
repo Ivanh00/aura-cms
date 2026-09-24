@@ -54,7 +54,7 @@ These guides describe the current `main` branch. The public Composer release is 
 ## Advanced
 
 - [API reference](/api-reference) - Reference the Aura facade, Resource and Field contracts, and host API patterns
-- [AI connector](/ai-connector) - Configure shared AI access for core features and plugins
+- [AI in Aura](/ai-connector) - Configure Laravel AI providers for core features and plugins
 - [Frontend integration](/frontend-integration) - Query resource data in Blade or a host API and resolve field values
 - [Performance](/performance) - Measure requests and tune storage, caching, queries, media, and widgets
 - [Testing](/testing) - Test resources, fields, permissions, Livewire components, and browser flows

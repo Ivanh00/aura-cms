@@ -2,7 +2,6 @@
 
 namespace Aura\Base\Livewire;
 
-use Aura\Base\Contracts\AiConnector;
 use Aura\Base\Settings\SettingsPage;
 use Aura\Base\Settings\SettingsPageAuthorizer;
 use Aura\Base\Settings\SettingsRegistry;
@@ -17,8 +16,6 @@ class Settings extends Component
     use InputFields;
     use MediaFields;
 
-    public ?array $aiConnectionStatus = null;
-
     public bool $canUpdate = false;
 
     public $form = [
@@ -28,8 +25,6 @@ class Settings extends Component
     public $model;
 
     public string $page = 'general';
-
-    public array $secretConfigured = [];
 
     public function boot(): void
     {
@@ -515,7 +510,8 @@ class Settings extends Component
 
         abort_unless($authorizer->canView($this->settingsPage(), auth()->user()), 403);
 
-        $this->canUpdate = $authorizer->canUpdate($this->settingsPage(), auth()->user());
+        $this->canUpdate = $authorizer->canUpdate($this->settingsPage(), auth()->user())
+            && $this->inputFields()->isNotEmpty();
 
         $valueString = [
             'darkmode-type' => config('aura.theme.darkmode-type'),
@@ -530,27 +526,13 @@ class Settings extends Component
 
         $stored = $store->values($this->model);
         $defaults = $registry->defaults();
-        $secretFields = $this->settingsPage()->secretFields;
-
-        $this->secretConfigured = array_fill_keys(
-            array_values(array_filter(
-                $secretFields,
-                static fn (string $slug): bool => $store->secret($slug, $stored) !== null,
-            )),
-            true,
-        );
-
-        $this->form['fields'] = $this->inputFields()->mapWithKeys(function ($field) use ($defaults, $secretFields, $stored) {
+        $this->form['fields'] = $this->inputFields()->mapWithKeys(function ($field) use ($defaults, $stored) {
             $slug = $field['slug'];
-
-            if (in_array($slug, $secretFields, true)) {
-                return [$slug => ''];
-            }
 
             return [$slug => $stored[$slug] ?? $defaults[$slug] ?? ''];
         })->toArray();
 
-        $this->model->setAttribute('value', Arr::except($stored, [...$registry->secretFields(), '_secret_contexts']));
+        $this->model->setAttribute('value', $stored);
     }
 
     public function render()
@@ -567,25 +549,20 @@ class Settings extends Component
 
     public function save(
         SettingsPageAuthorizer $authorizer,
-        SettingsRegistry $registry,
         SettingsStore $store,
     ): void {
-        abort_unless($authorizer->canUpdate($this->settingsPage(), auth()->user()), 403);
+        abort_unless(
+            $authorizer->canUpdate($this->settingsPage(), auth()->user())
+                && $this->inputFields()->isNotEmpty(),
+            403,
+        );
 
         $this->validate();
 
-        $secretFields = $this->settingsPage()->secretFields;
-
-        $this->model = $store->store($this->model, $this->form['fields'], $secretFields);
+        $this->model = $store->store($this->model, $this->form['fields']);
         $stored = $store->values($this->model);
 
-        foreach ($secretFields as $slug) {
-            $this->secretConfigured[$slug] = $store->secret($slug, $stored) !== null;
-
-            $this->form['fields'][$slug] = '';
-        }
-
-        $this->model->setAttribute('value', Arr::except($stored, [...$registry->secretFields(), '_secret_contexts']));
+        $this->model->setAttribute('value', $stored);
 
         $this->dispatch('notify', message: __('Successfully updated'), type: 'success');
     }
@@ -593,15 +570,5 @@ class Settings extends Component
     public function settingsPage(): SettingsPage
     {
         return app(SettingsRegistry::class)->page($this->page) ?? abort(404);
-    }
-
-    public function testAiConnection(AiConnector $connector, SettingsPageAuthorizer $authorizer): void
-    {
-        abort_unless($authorizer->canUpdate($this->settingsPage(), auth()->user()), 403);
-
-        $result = $connector->testConnection();
-        $this->aiConnectionStatus = $result->toArray();
-
-        $this->dispatch('notify', message: $result->message, type: $result->successful ? 'success' : 'error');
     }
 }

@@ -138,6 +138,8 @@ jobs:
           test -n "$(find public/vendor/aura/assets -type f -print -quit)"
           ! grep -q "Publishing service provider" aura-install.log
           test ! -f app/Providers/AuraServiceProvider.php
+          test -f config/ai.php
+          test ! -f database/migrations/2026_01_11_000001_create_agent_conversations_table.php
           php artisan tinker --execute='if (! App\Models\User::query()->where("email", "ci@example.com")->where("global_admin", true)->exists()) { throw new RuntimeException("CI admin missing or not global_admin"); }'
           vendor/bin/pint --test app/Models/User.php
           php artisan test --compact

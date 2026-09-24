@@ -98,27 +98,6 @@ final class SettingsRegistry
         Settings::flushFieldCache();
     }
 
-    /** @return array<string, string> */
-    public function secretContexts(): array
-    {
-        $contexts = [];
-
-        foreach ($this->pages() as $page) {
-            $contexts = array_replace($contexts, $page->secretContexts);
-        }
-
-        return $contexts;
-    }
-
-    /** @return list<string> */
-    public function secretFields(): array
-    {
-        return array_values(array_unique(array_merge(...array_map(
-            static fn (SettingsPage $page): array => $page->secretFields,
-            $this->pages(),
-        ))));
-    }
-
     /**
      * @param  array<string, array{source: string, page: SettingsPage}>  $pending
      */
@@ -167,22 +146,6 @@ final class SettingsRegistry
         foreach (array_keys($page->defaults) as $slug) {
             if (! isset($pageSlugs[$slug])) {
                 throw new InvalidArgumentException("Default [{$slug}] is not a field on settings page [{$page->slug}].");
-            }
-        }
-
-        foreach ($page->secretFields as $slug) {
-            if (! isset($pageSlugs[$slug])) {
-                throw new InvalidArgumentException("Secret [{$slug}] is not a field on settings page [{$page->slug}].");
-            }
-        }
-
-        foreach ($page->secretContexts as $secret => $context) {
-            if (! in_array($secret, $page->secretFields, true)) {
-                throw new InvalidArgumentException("Contextual secret [{$secret}] is not declared as a secret on settings page [{$page->slug}].");
-            }
-
-            if (! isset($pageSlugs[$context])) {
-                throw new InvalidArgumentException("Secret context [{$context}] is not a field on settings page [{$page->slug}].");
             }
         }
     }

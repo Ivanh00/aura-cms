@@ -2,8 +2,7 @@
 
 namespace Aura\Base;
 
-use Aura\Base\Ai\AiConfigurationRepository;
-use Aura\Base\Ai\AiManager;
+use Aura\Base\Ai\AiStatus;
 use Aura\Base\Commands\AuraLayoutCommand;
 use Aura\Base\Commands\CreateAuraPlugin;
 use Aura\Base\Commands\CreateResourceFactory;
@@ -22,10 +21,10 @@ use Aura\Base\Commands\PublishCommand;
 use Aura\Base\Commands\TransferFromPostsToCustomTable;
 use Aura\Base\Commands\TransformTableToResource;
 use Aura\Base\Commands\UpdateSchemaFromMigration;
-use Aura\Base\Contracts\AiConnector;
 use Aura\Base\Contracts\ResourceActionRegistry as ResourceActionRegistryContract;
 use Aura\Base\Database\Seeders\RoleCatalogSeeder;
 use Aura\Base\Facades\Aura;
+use Aura\Base\Livewire\AiProviderStatus;
 use Aura\Base\Livewire\Attachment\Index as AttachmentIndex;
 use Aura\Base\Livewire\AttachmentDetails;
 use Aura\Base\Livewire\BookmarkPage;
@@ -178,6 +177,7 @@ class AuraServiceProvider extends PackageServiceProvider
             'aura::user-teams' => UserTeams::class,
             'aura::modals' => Modals::class,
             'aura::plugins-page' => PluginsPage::class,
+            'aura::ai-provider-status' => AiProviderStatus::class,
             'aura::styleguide' => Styleguide::class,
             'aura::choose-template' => ChooseTemplate::class,
             'aura::two-factor-authentication-form' => TwoFactorAuthenticationForm::class,
@@ -198,6 +198,7 @@ class AuraServiceProvider extends PackageServiceProvider
             'aura.base.livewire.user-teams' => UserTeams::class,
             'aura.base.livewire.modals' => Modals::class,
             'aura.base.livewire.plugins-page' => PluginsPage::class,
+            'aura.base.livewire.ai-provider-status' => AiProviderStatus::class,
             'aura.base.livewire.styleguide' => Styleguide::class,
             'aura.base.livewire.choose-template' => ChooseTemplate::class,
             'aura.base.livewire.two-factor-authentication-form' => TwoFactorAuthenticationForm::class,
@@ -352,6 +353,10 @@ class AuraServiceProvider extends PackageServiceProvider
                             }
                         };
 
+                        if (! file_exists(config_path('ai.php'))) {
+                            $run('vendor:publish', ['--tag' => 'ai-config']);
+                        }
+
                         $run('aura:extend-user-model');
 
                         // The media library stores on the `public` disk and Attachment::url()
@@ -370,6 +375,7 @@ class AuraServiceProvider extends PackageServiceProvider
                             $command->line($createdAdmin
                                 ? '  2. Log in with the administrator you just created.'
                                 : '  2. Create an administrator with `php artisan aura:user`.');
+                            $command->line('  3. Configure AI providers in config/ai.php and your environment when needed.');
                         };
 
                         if ($command->option('no-interaction')) {
@@ -565,9 +571,7 @@ class AuraServiceProvider extends PackageServiceProvider
         $this->app->singleton(MediaAuthorization::class);
         $this->app->singleton(SettingsRegistry::class);
         $this->app->singleton(SettingsStore::class);
-        $this->app->singleton(AiConfigurationRepository::class);
-        $this->app->singleton(AiManager::class);
-        $this->app->alias(AiManager::class, AiConnector::class);
+        $this->app->singleton(AiStatus::class);
 
         app(SettingsRegistry::class)->register('eminiarts/aura-cms', CoreSettingsPages::all());
 

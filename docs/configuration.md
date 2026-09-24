@@ -351,6 +351,7 @@ Aura reads these environment variables through `config/aura.php`:
 | `AURA_TEAMS` | `teams` | `true` | Selects the teams-on or teams-off schema and behavior at migration and runtime. |
 | `AURA_REGISTRATION` | `auth.registration` | `true` | Enables or disables public registration routes and the registration link. |
 | `AURA_CREATE_TEAMS` | `auth.create_teams` | `true` | Allows or prevents team creation in `TeamPolicy`. |
+| `AURA_AI_ENABLED` | `ai.enabled` | `true` | Enables or disables AI features backed by the Laravel AI SDK. |
 
 There are no package-supported `AURA_FEATURES_*`, `AURA_THEME_*` or `AURA_MEDIA_*` variables. Change those values in the published config file. Clear Laravel's config cache after changing environment-backed configuration:
 

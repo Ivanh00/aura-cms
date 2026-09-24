@@ -55,6 +55,37 @@ describe('installation commands', function () {
             ->and($command->getDescription())->toContain('Install Aura CMS');
     });
 
+    it('documents environment-backed AI configuration after installation', function () {
+        $this->app->usePublicPath(sys_get_temp_dir().'/aura-install-'.bin2hex(random_bytes(8)));
+
+        foreach (['vendor:publish', 'aura:extend-user-model', 'aura:install-config', 'migrate', 'storage:link'] as $name) {
+            $command = new class($name) extends Command
+            {
+                public function __construct(string $name)
+                {
+                    parent::__construct();
+                    $this->setName($name);
+                    $this->ignoreValidationErrors();
+                }
+
+                public function handle(): int
+                {
+                    return self::SUCCESS;
+                }
+            };
+
+            $this->app->make(Kernel::class)->registerCommand($command);
+        }
+
+        $this->artisan('aura:install', [
+            '--no-interaction' => true,
+            '--no-admin' => true,
+        ])
+            ->expectsConfirmation('Would you like to star our repo on GitHub?', false)
+            ->expectsOutputToContain('Configure AI providers in config/ai.php and your environment')
+            ->assertSuccessful();
+    });
+
     it('fails before any side effect when a non-interactive install is missing admin options', function () {
         $this->artisan('aura:install', [
             '--no-interaction' => true,

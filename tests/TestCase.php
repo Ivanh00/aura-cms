@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\Concerns\InteractsWithViews;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Intervention\Image\Laravel\ServiceProvider as ImageServiceProvider;
 use Lab404\Impersonate\ImpersonateServiceProvider;
+use Laravel\Ai\AiServiceProvider;
 use Laravel\Fortify\FortifyServiceProvider;
 use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\Concerns\WithWorkbench;
@@ -113,6 +114,7 @@ class TestCase extends Orchestra
         return [
             LivewireServiceProvider::class,
             FortifyServiceProvider::class,
+            AiServiceProvider::class,
             AuthServiceProvider::class,
             AuraServiceProvider::class,
             ImpersonateServiceProvider::class,

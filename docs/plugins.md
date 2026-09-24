@@ -256,7 +256,7 @@ public function packageBooted(): void
 
 Use the plugin's lowercase Composer package name as the source. Page slugs use kebab-case, and field slugs must be unique across every registered settings page. Registration fails immediately on a page or field collision.
 
-Read a value through Aura so current-team context and encrypted secrets are handled consistently:
+Read a value through Aura so current-team context is handled consistently:
 
 ~~~php
 $pattern = Aura::setting(
@@ -265,23 +265,9 @@ $pattern = Aura::setting(
 );
 ~~~
 
-`Aura::setting()` reads the current team's settings. Public routes, console commands, and queued jobs have no authenticated team, so pass the team id explicitly: `Aura::setting('seo-site-name', teamId: $teamId)`. To find which team a public request belongs to, `app(SettingsStore::class)->all()` returns the non-secret settings of every team.
+`Aura::setting()` reads the current team's settings. Public routes, console commands, and queued jobs have no authenticated team, so pass the team id explicitly: `Aura::setting('seo-site-name', teamId: $teamId)`. To find which team a public request belongs to, `app(SettingsStore::class)->all()` returns the settings of every team.
 
-Declare write-only fields in `secretFields`. Aura encrypts new values with Laravel's encrypter, does not send stored secrets back to Livewire, and preserves the current secret when the form submits an empty value. Use `secretContexts` when a credential belongs to another field's selected value, such as a provider:
-
-~~~php
-new SettingsPage(
-    slug: 'integration',
-    title: 'Integration',
-    fields: [
-        // provider and API-key fields
-    ],
-    secretFields: ['integration-api-key'],
-    secretContexts: [
-        'integration-api-key' => 'integration-provider',
-    ],
-);
-~~~
+Settings pages are for non-sensitive application preferences. Keep credentials in environment-backed configuration and show only redacted, read-only status in the admin area.
 
 ## Resource plugins
 
