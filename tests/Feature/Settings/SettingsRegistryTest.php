@@ -80,8 +80,9 @@ test('plugin settings pages enforce separate view and update abilities', functio
     ]);
 
     $viewer = createAdmin();
-    $editor = User::factory()->create(['current_team_id' => $viewer->current_team_id]);
-    $denied = User::factory()->create(['current_team_id' => $viewer->current_team_id]);
+    $teamAttributes = config('aura.teams') ? ['current_team_id' => $viewer->current_team_id] : [];
+    $editor = User::factory()->create($teamAttributes);
+    $denied = User::factory()->create($teamAttributes);
 
     Gate::define('settings.seo.view', fn ($user): bool => in_array($user->id, [$viewer->id, $editor->id], true));
     Gate::define('settings.seo.update', fn ($user): bool => $user->id === $editor->id);
