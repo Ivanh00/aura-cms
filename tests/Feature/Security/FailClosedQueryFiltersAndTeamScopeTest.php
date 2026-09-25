@@ -90,6 +90,24 @@ it('scopes Role queries according to the teams feature flag when team context is
     expect(Role::query()->count())->toBeGreaterThan(0)
         ->and(Role::query()->toSql())->not->toContain('1 = 0');
 });
+
+it('always releases the team scope recursion guard after a throwable', function () {
+    if (! config('aura.teams')) {
+        $this->markTestSkipped('The recursion guard is only entered when teams are enabled.');
+    }
+
+    Cache::shouldReceive('has')
+        ->once()
+        ->andThrow(new Error('Simulated cache failure'));
+
+    expect(fn () => Post::query()->get())
+        ->toThrow(Error::class, 'Simulated cache failure');
+
+    $guard = new ReflectionProperty(TeamScope::class, 'applying');
+
+    expect($guard->getValue())->toBeFalse();
+});
+
 it('rejects table filters with an unknown operator via fail-closed default', function () {
     $harness = new class
     {

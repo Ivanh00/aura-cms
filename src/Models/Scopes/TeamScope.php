@@ -49,8 +49,6 @@ class TeamScope implements Scope
             // Admin/resource routes still require auth middleware, so skipping the
             // scope for guests does not open team data to the public.
             if (! Auth::check()) {
-                self::$applying = false;
-
                 return;
             }
 
@@ -82,15 +80,11 @@ class TeamScope implements Scope
                     $builder->whereKey($authUser->getKey());
                 }
 
-                self::$applying = false;
-
                 return;  // Early return is important.
             }
 
             // For Team model, don't apply team scope (leave unscoped as today)
             if ($model->getTable() === 'teams') {
-                self::$applying = false;
-
                 return;
             }
 
@@ -99,8 +93,6 @@ class TeamScope implements Scope
             // it is missing, refuse the query rather than exposing the catalog.
             if (! $currentTeamId) {
                 $builder->whereRaw('1 = 0');
-
-                self::$applying = false;
 
                 return;
             }
@@ -113,21 +105,13 @@ class TeamScope implements Scope
             if ($model instanceof Role) {
                 $model->scopeVisibleToTeam($builder, $currentTeamId);
 
-                self::$applying = false;
-
                 return;
             }
 
             // For all other models, filter by team_id
             $builder->where($model->getTable().'.team_id', $currentTeamId);
-
+        } finally {
             self::$applying = false;
-
-            return;
-
-        } catch (\Exception $e) {
-            self::$applying = false;
-            throw $e;
         }
     }
 
