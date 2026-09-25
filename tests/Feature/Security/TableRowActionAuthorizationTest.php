@@ -3,7 +3,6 @@
 use Aura\Base\Facades\Aura;
 use Aura\Base\Livewire\Table\Table;
 use Aura\Base\Resource;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Cache;
 
 use function Pest\Livewire\livewire;
@@ -114,9 +113,9 @@ test('table view action uses scoped find and never bare model find', function ()
     ]);
 
     // Out-of-scope id must 404 via firstOrFail on the scoped query.
-    expect(fn () => livewire(Table::class, ['query' => null, 'model' => $own])
-        ->call('action', ['action' => 'view', 'id' => $foreign->id]))
-        ->toThrow(ModelNotFoundException::class);
+    livewire(Table::class, ['query' => null, 'model' => $own])
+        ->call('action', ['action' => 'view', 'id' => $foreign->id])
+        ->assertStatus(404);
 
     // In-scope id is authorized and redirects.
     livewire(Table::class, ['query' => null, 'model' => $own])
