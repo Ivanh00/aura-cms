@@ -325,6 +325,8 @@ class User extends Resource implements AuthenticatableContract, AuthorizableCont
                 'slug' => 'avatar',
                 'on_create' => false,
                 'display' => fn ($value, $model) => $model->displayAvatar($value),
+                'display_image_classes' => 'object-cover object-center w-10 h-10 rounded-full shadow-sm ring-1 ring-gray-950/10 dark:ring-white/10',
+                'display_image_style' => '',
                 'style' => [
                     'width' => '100',
                 ],

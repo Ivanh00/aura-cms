@@ -29,7 +29,9 @@ class Image extends Field implements PreloadsTableDisplay
 
             if ($attachment) {
                 $url = $attachment->thumbnail('xs');
-                $imageHtml = "<img src='{$url}' class='object-cover rounded-lg shadow-lg' style='width: 6rem;'>";
+                $imageClasses = $field['display_image_classes'] ?? 'object-cover rounded-lg shadow-lg';
+                $imageStyle = $field['display_image_style'] ?? 'width: 6rem;';
+                $imageHtml = "<img src='{$url}' class='{$imageClasses}' style='{$imageStyle}'>";
             } else {
                 return $value;
             }

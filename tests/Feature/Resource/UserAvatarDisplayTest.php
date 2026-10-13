@@ -48,6 +48,8 @@ test('uploaded avatars display as images and removing one restores initials', fu
 
     expect($user->displayFieldValue('avatar', $attachment->id))
         ->toContain('USER-AVATAR/'.$attachment->id)
+        ->toContain('object-cover object-center w-10 h-10 rounded-full')
+        ->not->toContain('width: 6rem')
         ->not->toContain('>EE<')
         ->and($user->displayFieldValue('avatar', null))
         ->toContain('EE');
