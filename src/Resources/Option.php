@@ -46,10 +46,11 @@ class Option extends Resource
             ],
             [
                 'name' => 'Value',
-                'type' => 'Aura\\Base\\Fields\\Textarea',
-                'validation' => 'required',
+                'type' => 'Aura\\Base\\Fields\\Json',
+                'validation' => 'required|json',
                 'on_index' => false,
                 'slug' => 'value',
+                'decode' => false,
                 'style' => [
                     'width' => '100',
                 ],
@@ -65,6 +66,25 @@ class Option extends Resource
     public static function getWidgets(): array
     {
         return [];
+    }
+
+    /**
+     * Accept JSON from the admin editor without storing it as a JSON string.
+     *
+     * Programmatic callers may continue to pass native arrays and scalars. A
+     * valid JSON string from the editor is decoded first so the model's array
+     * cast returns the original nesting and scalar types after a reload.
+     */
+    public function setValueAttribute($value): void
+    {
+        if (is_string($value) && json_validate($value)) {
+            $value = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+        }
+
+        $this->attributes['value'] = json_encode(
+            $value,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+        );
     }
 
     /**

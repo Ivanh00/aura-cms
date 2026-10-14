@@ -9,7 +9,7 @@ describe('Json Field Configuration', function () {
         $field = new Json;
 
         expect($field->edit)->toBe('aura::fields.json')
-            ->and($field->view)->toBe('aura::fields.view-value');
+            ->and($field->view)->toBe('aura::fields.json-view');
     });
 });
 
@@ -25,6 +25,13 @@ describe('Json Field Value Handling', function () {
 
         expect($field->get(null, ['a' => 1]))->toBe(['a' => 1])
             ->and($field->get(null, null))->toBeNull();
+    });
+
+    test('get can preserve values already decoded by a model cast', function () {
+        $field = new Json;
+
+        expect($field->get(null, 'dark', ['decode' => false]))->toBe('dark')
+            ->and($field->get(null, true, ['decode' => false]))->toBeTrue();
     });
 
     test('set encodes arrays to JSON', function () {
@@ -46,9 +53,25 @@ describe('Json Field Value Handling', function () {
         expect($field->get(null, $field->set(null, [], $value)))->toBe($value);
     });
 
-    test('display JSON-encodes the value', function () {
+    test('hydrate formats native values as editable JSON', function () {
         $field = new Json;
 
-        expect($field->display([], ['a' => 1], null))->toBe('{"a":1}');
+        expect($field->hydrate(['nested' => ['enabled' => true]]))->toBe(<<<'JSON'
+{
+    "nested": {
+        "enabled": true
+    }
+}
+JSON);
+    });
+
+    test('display pretty prints and escapes JSON', function () {
+        $field = new Json;
+
+        expect($field->display([], ['markup' => '<script>alert(1)</script>'], null))->toBe(<<<'JSON'
+{
+    "markup": "&lt;script&gt;alert(1)&lt;/script&gt;"
+}
+JSON);
     });
 });

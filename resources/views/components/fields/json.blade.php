@@ -5,7 +5,9 @@
         @php
             $fieldSlug = $field['slug'];
             $fieldContent = $form['fields'][$fieldSlug] ?? '';
-            $content = json_encode($fieldContent, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            $content = is_string($fieldContent) && json_validate($fieldContent)
+                ? $fieldContent
+                : json_encode($fieldContent, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
             // dump($content);
 

@@ -6,7 +6,7 @@ class Json extends Field
 {
     public $edit = 'aura::fields.json';
 
-    public $view = 'aura::fields.view-value';
+    public $view = 'aura::fields.json-view';
 
     public function display($field, $value, $model)
     {
@@ -14,16 +14,31 @@ class Json extends Field
         // raw, so neutralise stored markup. ENT_NOQUOTES: the JSON quotes are
         // text content here, not an attribute value, and escaping them would
         // only make the rendered payload unreadable.
-        return htmlspecialchars((string) json_encode($value), ENT_NOQUOTES, 'UTF-8', false);
+        $json = json_encode(
+            $value,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+        );
+
+        return htmlspecialchars($json === false ? '' : $json, ENT_NOQUOTES, 'UTF-8', false);
     }
 
     public function get($class, $value, $field = null)
     {
-        if (is_array($value) || $value === null) {
+        if (optional($field)['decode'] === false || is_array($value) || $value === null) {
             return $value;
         }
 
         return json_decode($value, true);
+    }
+
+    public function hydrate($value, $field = null)
+    {
+        $json = json_encode(
+            $value,
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE
+        );
+
+        return $json === false ? '' : $json;
     }
 
     // public function getFields()
