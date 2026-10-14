@@ -17,7 +17,7 @@
 @endphp
 <div class="px-3 mt-5 mb-1 aura-sidebar-heading">
     <x-aura::tippy text="{{ $slot }}" position="right">
-        <div x-cloak class="py-2 -mt-2 mb-2 h-0 show-collapsed">
+        <div class="py-2 -mt-2 mb-2 h-0 show-collapsed">
             <div class="w-full border-b opacity-40 aura-sidebar-heading-border"></div>
         </div>
     </x-aura::tippy>

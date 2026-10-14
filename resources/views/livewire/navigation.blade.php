@@ -5,14 +5,62 @@
         @if($this->sidebarType == 'light')
             light
         @endif
-        ">
+        "
+    data-sidebar-hydrated="false"
+>
     <style>
         @media screen and (max-width: 767px) {
             .mobile-load-hidden {
                 display: none !important;
             }
         }
+
+        @media screen and (min-width: 768px) {
+            .aura-sidebar[data-sidebar-hydrated="false"] [data-sidebar-layout],
+            .aura-sidebar[data-sidebar-hydrated="false"] [data-sidebar-panel] {
+                transition: none !important;
+            }
+
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="true"] [data-sidebar-layout],
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="true"] [data-sidebar-panel] {
+                width: {{ $this->compact ? '14rem' : '18rem' }};
+            }
+
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="false"] [data-sidebar-layout],
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="false"] [data-sidebar-panel] {
+                width: 5rem;
+            }
+
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="true"] [data-sidebar-layout] .show-collapsed,
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="false"] [data-sidebar-layout] .hide-collapsed {
+                display: none;
+            }
+
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="true"] [data-sidebar-layout] .hide-collapsed,
+            .aura-sidebar[data-sidebar-hydrated="false"][data-sidebar-initial-open="false"] [data-sidebar-layout] .show-collapsed {
+                display: block;
+            }
+        }
     </style>
+
+    <script>
+        (() => {
+            const sidebar = document.currentScript.closest('.aura-sidebar');
+            let initialOpen = {{ $this->sidebarToggled ? 'true' : 'false' }};
+
+            try {
+                const storedValue = localStorage.getItem('leftSidebar');
+
+                if (storedValue !== null) {
+                    initialOpen = storedValue === 'true';
+                }
+            } catch (error) {
+                // Use the server preference when browser storage is unavailable.
+            }
+
+            sidebar.dataset.sidebarInitialOpen = String(initialOpen);
+        })();
+    </script>
 
     <div
         x-data="{
@@ -37,6 +85,8 @@
                 document.querySelectorAll('.mobile-load-hidden').forEach((el) => {
                     el.classList.remove('mobile-load-hidden');
                 });
+
+                this.$root.closest('.aura-sidebar').dataset.sidebarHydrated = 'true';
             });
         },
         persistSidebarPreference() {

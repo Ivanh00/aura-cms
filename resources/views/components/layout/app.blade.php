@@ -54,7 +54,7 @@
         @endif
 
 
-        <div class="overflow-y-auto flex-1">
+        <div class="overflow-y-auto flex-1" style="scrollbar-gutter: stable;">
             <div class="p-5 md:p-8">
                 {{ $slot }}
             </div>
