@@ -93,7 +93,7 @@
     @apply hidden;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 767px) {
     .closed-sidebar {
         display: none;
     }
@@ -673,4 +673,3 @@
 .aura-sidebar-darkmode-type-dark .aura-sidebar-team-switcher {
     @apply dark:text-gray-200 dark:bg-transparent dark:hover:bg-white/[0.06] dark:focus-visible:ring-primary-500;
 }
-

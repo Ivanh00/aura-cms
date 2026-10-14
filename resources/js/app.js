@@ -64,23 +64,6 @@ document.addEventListener('livewire:init', () => {
     }
   }))
 
-  Alpine.store('leftSidebar', {
-      init() {
-        let storedValue = localStorage.getItem('leftSidebar');
-
-        if(storedValue === null) {
-            this.on = true;
-            localStorage.setItem('leftSidebar', this.on);
-        } else {
-            this.on = storedValue === 'true';
-        }
-      },
-      on: true,
-      toggle() {
-          this.on = ! this.on
-          localStorage.setItem('leftSidebar', this.on);
-      }
-  })
 });
 
 

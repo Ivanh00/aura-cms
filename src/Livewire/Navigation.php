@@ -44,10 +44,6 @@ class Navigation extends Component
             // $this->sidebarToggled = true;
         }
 
-        if (auth()->check()) {
-            $this->sidebarToggled = auth()->user()->getOptionSidebarToggled();
-        }
-
         $this->iconClass = $this->getIconClass($this->sidebarType);
     }
 
@@ -95,10 +91,14 @@ class Navigation extends Component
         auth()->user()->updateOption('sidebar', $this->toggledGroups);
     }
 
-    public function toggleSidebar()
+    /**
+     * @deprecated Sidebar visibility is managed in the browser so it changes immediately.
+     *
+     * Keep this method temporarily so older published navigation views do not fail while
+     * applications update their overrides.
+     */
+    public function toggleSidebar(): void
     {
-        $this->sidebarToggled = ! $this->sidebarToggled;
-
-        auth()->user()->updateOption('sidebarToggled', $this->sidebarToggled);
+        // Intentionally left blank. The browser owns and persists sidebar visibility.
     }
 }
