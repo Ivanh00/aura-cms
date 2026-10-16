@@ -62,7 +62,7 @@ test('Default Team Settings are created', function () {
     $this->assertIsArray($option->value);
 
     // assertJSON option value darkmode-type is auto
-    $this->assertJsonStringEqualsJsonString(json_encode($option->value), '{"darkmode-type":"auto","sidebar-type":"dark","color-palette":"aura","gray-color-palette":"slate","sidebar-size":"standard","sidebar-darkmode-type":"dark"}');
+    $this->assertJsonStringEqualsJsonString(json_encode($option->value), '{"darkmode-type":"auto","sidebar-type":"dark","color-palette":"aura","gray-color-palette":"slate","sidebar-size":"standard","sidebar-darkmode-type":"dark","interface-density":"comfortable","corner-radius":"rounded"}');
 });
 
 test('Team Settings can be saved', function () {
@@ -191,16 +191,18 @@ test('different options apply correct classes', function ($settings) {
     [[
         'darkmode-type' => 'light',
         'sidebar-type' => 'light',
+        'sidebar-darkmode-type' => 'primary',
         'color-palette' => 'red',
         'result-sidebar' => 'aura-sidebar-type-light',
-        'result-content' => '',
+        'result-content' => 'aura-sidebar-darkmode-type-primary',
     ]],
     [[
         'darkmode-type' => 'dark',
         'sidebar-type' => 'primary',
+        'sidebar-darkmode-type' => 'light',
         'color-palette' => 'red',
         'result-sidebar' => 'aura-sidebar-type-primary',
-        'result-content' => '',
+        'result-content' => 'aura-sidebar-darkmode-type-light',
     ]],
     [[
         'darkmode-type' => 'auto',

@@ -44,7 +44,7 @@ if (!isset($sizes[$size])) {
 $disabledClass = $disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : '';
 $class .= ' ' . $disabledClass;
 
-$sharedClass = ' relative items-center justify-center whitespace-nowrap select-none transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 ';
+$sharedClass = ' aura-button relative items-center justify-center whitespace-nowrap select-none transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 ';
 
 @endphp
 

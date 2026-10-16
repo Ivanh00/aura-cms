@@ -29,6 +29,57 @@ test('Team Settings Component can be rendered', function () {
     $component->assertStatus(200);
 });
 
+test('appearance sections have consistent spacing', function () {
+    Livewire::test(Settings::class)
+        ->assertSeeHtml('margin-bottom: var(--aura-layout-gap, 1rem);');
+});
+
+test('appearance choices preview on the full page and can be discarded', function () {
+    Livewire::test(Settings::class)
+        ->assertDontSee('Live appearance preview')
+        ->assertSeeHtml('data-preview-sidebar-size="standard"')
+        ->set('form.fields.color-palette', 'red')
+        ->set('form.fields.sidebar-size', 'dense')
+        ->set('form.fields.interface-density', 'compact')
+        ->set('form.fields.corner-radius', 'square')
+        ->assertSeeHtml('data-preview-sidebar-size="dense"')
+        ->assertSeeHtml('data-preview-interface-density="compact"')
+        ->assertSeeHtml('data-preview-corner-radius="square"')
+        ->assertSee('--primary-600: 220 38 38;')
+        ->assertSee('Unsaved changes')
+        ->call('discardAppearanceChanges')
+        ->assertSet('form.fields.color-palette', 'aura')
+        ->assertSet('form.fields.sidebar-size', 'standard')
+        ->assertSet('form.fields.interface-density', 'comfortable')
+        ->assertSet('form.fields.corner-radius', 'rounded')
+        ->assertDontSee('Unsaved changes');
+});
+
+test('sidebar darkmode choices stay available for every page color scheme', function () {
+    Livewire::test(Settings::class)
+        ->assertSee('Sidebar Darkmode')
+        ->set('form.fields.darkmode-type', 'dark')
+        ->assertSee('Sidebar Darkmode')
+        ->set('form.fields.sidebar-darkmode-type', 'primary')
+        ->assertSeeHtml('data-preview-sidebar-darkmode-type="primary"')
+        ->set('form.fields.darkmode-type', 'light')
+        ->assertSee('Sidebar Darkmode');
+});
+
+test('saved appearance choices persist', function () {
+    Livewire::test(Settings::class)
+        ->set('form.fields.sidebar-size', 'dense')
+        ->set('form.fields.interface-density', 'compact')
+        ->set('form.fields.corner-radius', 'square')
+        ->call('save');
+
+    $settings = Option::firstOrFail()->value;
+
+    expect($settings['sidebar-size'])->toBe('dense')
+        ->and($settings['interface-density'])->toBe('compact')
+        ->and($settings['corner-radius'])->toBe('square');
+});
+
 test('Default Team Settings are created', function () {
     if (! Schema::hasTable('teams')) {
         $this->markTestSkipped('Team tests require the teams schema.');
@@ -64,7 +115,7 @@ test('Default Team Settings are created', function () {
     $this->assertIsArray($option->value);
 
     // assertJSON option value matches expected JSON structure
-    $this->assertJsonStringEqualsJsonString(json_encode($option->value), '{"darkmode-type":"auto","sidebar-type":"dark","color-palette":"aura","gray-color-palette":"slate","sidebar-size":"standard","sidebar-darkmode-type":"dark"}');
+    $this->assertJsonStringEqualsJsonString(json_encode($option->value), '{"darkmode-type":"auto","sidebar-type":"dark","color-palette":"aura","gray-color-palette":"slate","sidebar-size":"standard","sidebar-darkmode-type":"dark","interface-density":"comfortable","corner-radius":"rounded"}');
 });
 
 test('Team Settings can be saved2', function () {

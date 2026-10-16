@@ -7,6 +7,10 @@
     $fontFamily = \Aura\Base\ThemeTokens::fontFamily($settings);
     $lightColors = \Aura\Base\ThemeTokens::colors($settings, 'light');
     $darkColors = \Aura\Base\ThemeTokens::colors($settings, 'dark');
+    $designTokens = \Aura\Base\ThemeTokens::design($settings);
+    $colorScope = $colorScope ?? ':root';
+    $darkColorScope = $darkColorScope ?? '.dark';
+    $includeColorHelpers = $includeColorHelpers ?? true;
 
     $colorShades = ['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
     $grayShades = ['25', '50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
@@ -1057,8 +1061,12 @@
 @endphp
 
 <style>
-    :root {
+    {!! $colorScope !!} {
         --aura-font-sans: {!! $fontFamily !!};
+
+        @foreach ($designTokens as $key => $value)
+            {{ $key }}: {{ $value }};
+        @endforeach
 
         @foreach ($lightColors as $key => $value)
             --aura-color-{{ $key }}: {{ $value }};
@@ -1073,19 +1081,20 @@
         @endforeach
     }
 
-    :root {
+    {!! $colorScope !!} {
         @foreach ($grayColors as $key => $value)
             --{{ $key }}: {{ $value }};
         @endforeach
     }
 
-    .dark {
+    {!! $darkColorScope !!} {
         @foreach ($darkColors as $key => $value)
             --aura-color-{{ $key }}: {{ $value }};
         @endforeach
     }
 </style>
 
+@if($includeColorHelpers)
 <script>
     function getCssVariableValue(variableName) {
         var rgb = getComputedStyle(document.documentElement).getPropertyValue(variableName);
@@ -1108,3 +1117,4 @@
     }
     @endif
 </script>
+@endif

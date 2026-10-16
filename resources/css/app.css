@@ -23,10 +23,33 @@
         position: relative;
         width: calc(100% - 18rem) !important;
     }
+
+    .aura-sidebar-size-standard .aura-navigation.open-sidebar,
+    .aura-sidebar-size-standard .aura-navigation.open-sidebar .aura-sidebar-bg {
+        width: 18rem !important;
+    }
+
+    .aura-sidebar-size-compact .aura-navigation.open-sidebar,
+    .aura-sidebar-size-compact .aura-navigation.open-sidebar .aura-sidebar-bg,
+    .aura-sidebar-size-dense .aura-navigation.open-sidebar,
+    .aura-sidebar-size-dense .aura-navigation.open-sidebar .aura-sidebar-bg {
+        width: 14rem !important;
+    }
+
+    .aura-sidebar-size-standard + .aura-content {
+        width: calc(100% - 18rem) !important;
+    }
+
+    .aura-sidebar-size-compact + .aura-content,
+    .aura-sidebar-size-dense + .aura-content {
+        width: calc(100% - 14rem) !important;
+    }
 }
 
 .aura-card {
     @apply p-5 bg-white rounded-xl shadow-sm ring-1 ring-gray-950/10;
+    padding: var(--aura-panel-padding, 1.25rem);
+    border-radius: var(--aura-panel-radius, 0.75rem);
 }
 
 .dark .aura-card {
@@ -35,9 +58,52 @@
 
 .aura-card-small {
     @apply p-2 bg-white rounded-lg shadow-sm ring-1 ring-gray-950/10;
+    padding: var(--aura-panel-small-padding, 0.5rem);
+    border-radius: var(--aura-control-radius, 0.5rem);
 }
 .dark .aura-card-small {
     @apply bg-gray-800 ring-white/10;
+}
+
+.aura-button {
+    border-radius: var(--aura-control-radius, 0.5rem);
+}
+
+.aura-sidebar-item,
+.aura-sidebar-dropdown-button,
+.aura-sidebar-dropdown-button-expanded,
+.aura-sidebar-dropdown-collapsed,
+.aura-sidebar-search,
+.aura-sidebar-toggle {
+    border-radius: var(--aura-control-radius, 0.5rem);
+}
+
+.aura-sidebar-size-dense .aura-sidebar-item,
+.aura-sidebar-size-dense .aura-sidebar-dropdown-button,
+.aura-sidebar-size-dense .aura-sidebar-dropdown-button-expanded,
+.aura-sidebar-size-dense .aura-sidebar-dropdown-collapsed {
+    height: var(--aura-sidebar-item-height, 1.75rem);
+    padding-inline: var(--aura-sidebar-item-padding-x, 0.375rem);
+}
+
+.aura-sidebar-size-dense .sidebar-item svg,
+.aura-sidebar-size-dense .sidebar-item-compact svg,
+.aura-sidebar-size-dense .sidebar-item-icon svg {
+    width: var(--aura-sidebar-icon-size, 1rem);
+    height: var(--aura-sidebar-icon-size, 1rem);
+}
+
+.aura-sidebar-size-dense .aura-sidebar-heading {
+    margin-top: var(--aura-sidebar-heading-gap, 0.625rem);
+    margin-bottom: 0.125rem;
+}
+
+.aura-sidebar-size-dense .aura-sidebar-header {
+    height: 3.5rem;
+}
+
+.aura-sidebar-size-dense .aura-sidebar-footer {
+    min-height: 3.75rem;
 }
 
 
@@ -673,4 +739,3 @@
 .aura-sidebar-darkmode-type-dark .aura-sidebar-team-switcher {
     @apply dark:text-gray-200 dark:bg-transparent dark:hover:bg-white/[0.06] dark:focus-visible:ring-primary-500;
 }
-

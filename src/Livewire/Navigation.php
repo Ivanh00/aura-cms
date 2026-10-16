@@ -12,9 +12,9 @@ class Navigation extends Component
     public $toggledGroups = [];
 
     #[Computed]
-    public function compact(): string
+    public function compact(): bool
     {
-        return $this->settings['sidebar-size'] ?? config('aura.theme.sidebar-size');
+        return in_array($this->sidebarSize(), ['compact', 'dense'], true);
     }
 
     #[Computed]
@@ -70,6 +70,14 @@ class Navigation extends Component
     public function sidebarDarkmodeType(): string
     {
         return $this->settings['sidebar-darkmode-type'] ?? config('aura.theme.sidebar-darkmode-type');
+    }
+
+    #[Computed]
+    public function sidebarSize(): string
+    {
+        $size = $this->settings['sidebar-size'] ?? config('aura.theme.sidebar-size');
+
+        return in_array($size, ['standard', 'compact', 'dense'], true) ? $size : 'standard';
     }
 
     #[Computed]

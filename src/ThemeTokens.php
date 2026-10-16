@@ -64,6 +64,70 @@ final class ThemeTokens
     }
 
     /**
+     * Shared spacing and radius variables used by the admin interface.
+     *
+     * @param  array<string, mixed>  $theme
+     * @return array<string, string>
+     */
+    public static function design(array $theme): array
+    {
+        $density = $theme['interface-density'] ?? 'comfortable';
+        $radius = $theme['corner-radius'] ?? 'rounded';
+        $sidebarSize = $theme['sidebar-size'] ?? 'standard';
+
+        $densityTokens = match ($density) {
+            'compact' => [
+                '--aura-panel-padding' => '1rem',
+                '--aura-panel-small-padding' => '0.375rem',
+                '--aura-layout-gap' => '1rem',
+            ],
+            default => [
+                '--aura-panel-padding' => '1.25rem',
+                '--aura-panel-small-padding' => '0.5rem',
+                '--aura-layout-gap' => '1.5rem',
+            ],
+        };
+
+        $radiusTokens = match ($radius) {
+            'square' => [
+                '--aura-panel-radius' => '0rem',
+                '--aura-control-radius' => '0rem',
+            ],
+            'subtle' => [
+                '--aura-panel-radius' => '0.375rem',
+                '--aura-control-radius' => '0.25rem',
+            ],
+            default => [
+                '--aura-panel-radius' => '0.75rem',
+                '--aura-control-radius' => '0.5rem',
+            ],
+        };
+
+        $sidebarTokens = match ($sidebarSize) {
+            'dense' => [
+                '--aura-sidebar-item-height' => '1.75rem',
+                '--aura-sidebar-item-padding-x' => '0.375rem',
+                '--aura-sidebar-icon-size' => '1rem',
+                '--aura-sidebar-heading-gap' => '0.625rem',
+            ],
+            'compact' => [
+                '--aura-sidebar-item-height' => '2rem',
+                '--aura-sidebar-item-padding-x' => '0.5rem',
+                '--aura-sidebar-icon-size' => '1.125rem',
+                '--aura-sidebar-heading-gap' => '0.875rem',
+            ],
+            default => [
+                '--aura-sidebar-item-height' => '2.25rem',
+                '--aura-sidebar-item-padding-x' => '0.75rem',
+                '--aura-sidebar-icon-size' => '1.25rem',
+                '--aura-sidebar-heading-gap' => '1.25rem',
+            ],
+        };
+
+        return [...$densityTokens, ...$radiusTokens, ...$sidebarTokens];
+    }
+
+    /**
      * @param  array<string, mixed>  $theme
      */
     public static function fontFamily(array $theme): string

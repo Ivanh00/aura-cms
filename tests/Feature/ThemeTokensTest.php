@@ -63,6 +63,42 @@ test('renderer emits the semantic variables for both color schemes', function ()
         ->toContain('--aura-color-muted: 161 161 170;');
 });
 
+test('design presets emit stable density radius and sidebar variables', function () {
+    expect(ThemeTokens::design([
+        'interface-density' => 'compact',
+        'corner-radius' => 'square',
+        'sidebar-size' => 'dense',
+    ]))->toMatchArray([
+        '--aura-panel-padding' => '1rem',
+        '--aura-layout-gap' => '1rem',
+        '--aura-panel-radius' => '0rem',
+        '--aura-control-radius' => '0rem',
+        '--aura-sidebar-item-height' => '1.75rem',
+        '--aura-sidebar-icon-size' => '1rem',
+    ]);
+});
+
+test('scoped renderer isolates temporary preview variables and scripts', function () {
+    $html = view('aura::components.layout.colors', [
+        'settings' => [
+            'color-palette' => 'red',
+            'interface-density' => 'compact',
+            'corner-radius' => 'subtle',
+        ],
+        'colorScope' => '#settings-preview',
+        'darkColorScope' => '#settings-preview.dark',
+        'includeColorHelpers' => false,
+    ])->render();
+
+    expect($html)
+        ->toContain('#settings-preview {')
+        ->toContain('#settings-preview.dark {')
+        ->toContain('--primary-600: 220 38 38;')
+        ->toContain('--aura-panel-padding: 1rem;')
+        ->toContain('--aura-control-radius: 0.25rem;')
+        ->not->toContain('document.documentElement.classList');
+});
+
 test('font family serializer removes only matching outer quote pairs', function (array|string $families, string $expected) {
     expect(ThemeTokens::fontFamily([
         'font' => ['family' => $families],

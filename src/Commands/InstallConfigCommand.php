@@ -102,7 +102,7 @@ class InstallConfigCommand extends Command
                         default: $currentValue
                     );
                 } elseif ($option == 'sidebar-size') {
-                    $choices = ['standard', 'compact'];
+                    $choices = ['standard', 'compact', 'dense'];
                     $newValue = select(
                         label: "Select value for '{$option}':",
                         options: $choices,
@@ -110,6 +110,20 @@ class InstallConfigCommand extends Command
                     );
                 } elseif ($option == 'sidebar-type') {
                     $choices = ['primary', 'light', 'dark'];
+                    $newValue = select(
+                        label: "Select value for '{$option}':",
+                        options: $choices,
+                        default: $currentValue
+                    );
+                } elseif ($option == 'interface-density') {
+                    $choices = ['comfortable', 'compact'];
+                    $newValue = select(
+                        label: "Select value for '{$option}':",
+                        options: $choices,
+                        default: $currentValue
+                    );
+                } elseif ($option == 'corner-radius') {
+                    $choices = ['rounded', 'subtle', 'square'];
                     $newValue = select(
                         label: "Select value for '{$option}':",
                         options: $choices,

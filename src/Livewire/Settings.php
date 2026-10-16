@@ -9,12 +9,25 @@ use Aura\Base\Settings\SettingsStore;
 use Aura\Base\Traits\InputFields;
 use Aura\Base\Traits\MediaFields;
 use Illuminate\Support\Arr;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 class Settings extends Component
 {
     use InputFields;
     use MediaFields;
+
+    /** @var list<string> */
+    private const APPEARANCE_FIELDS = [
+        'color-palette',
+        'gray-color-palette',
+        'sidebar-size',
+        'sidebar-type',
+        'darkmode-type',
+        'sidebar-darkmode-type',
+        'interface-density',
+        'corner-radius',
+    ];
 
     public ?array $aiConnectionStatus = null;
 
@@ -26,12 +39,21 @@ class Settings extends Component
 
     public string $page = 'general';
 
+    public array $savedAppearance = [];
+
     public array $secretConfigured = [];
 
     public function boot(): void
     {
         // The field caches are keyed by class, but this component renders a different page per URL.
         static::flushFieldCache();
+    }
+
+    public function discardAppearanceChanges(): void
+    {
+        foreach ($this->savedAppearance as $slug => $value) {
+            $this->form['fields'][$slug] = $value;
+        }
     }
 
     public function fieldsCollection()
@@ -80,6 +102,7 @@ class Settings extends Component
             [
                 'name' => 'Size',
                 'type' => 'Aura\\Base\\Fields\\Radio',
+                'live' => true,
                 'options' => [
                     [
                         'key' => 'standard',
@@ -88,6 +111,10 @@ class Settings extends Component
                     [
                         'key' => 'compact',
                         'value' => 'Compact',
+                    ],
+                    [
+                        'key' => 'dense',
+                        'value' => 'Dense',
                     ],
                 ],
                 'slug' => 'sidebar-size',
@@ -98,6 +125,7 @@ class Settings extends Component
             [
                 'name' => 'Sidebar',
                 'type' => 'Aura\\Base\\Fields\\Radio',
+                'live' => true,
                 'options' => [
                     [
                         'key' => 'primary',
@@ -144,6 +172,7 @@ class Settings extends Component
             [
                 'name' => 'Sidebar Darkmode',
                 'type' => 'Aura\\Base\\Fields\\Radio',
+                'live' => true,
                 'options' => [
                     [
                         'key' => 'primary',
@@ -162,11 +191,58 @@ class Settings extends Component
                 'style' => [
                     'width' => '25',
                 ],
-                'conditional_logic' => function ($model, $form) {
-                    if ($form && $form['fields'] && $form['fields']['darkmode-type']) {
-                        return $form['fields']['darkmode-type'] == 'auto';
-                    }
-                },
+            ],
+            [
+                'type' => 'Aura\\Base\\Fields\\Panel',
+                'name' => 'Advanced Appearance',
+                'slug' => 'panel-theme-advanced',
+                'style' => [
+                    'width' => '100',
+                ],
+            ],
+            [
+                'name' => 'Interface Density',
+                'type' => 'Aura\\Base\\Fields\\Radio',
+                'live' => true,
+                'options' => [
+                    [
+                        'key' => 'comfortable',
+                        'value' => 'Comfortable',
+                    ],
+                    [
+                        'key' => 'compact',
+                        'value' => 'Compact',
+                    ],
+                ],
+                'slug' => 'interface-density',
+                'default' => 'comfortable',
+                'style' => [
+                    'width' => '50',
+                ],
+            ],
+            [
+                'name' => 'Corner Radius',
+                'type' => 'Aura\\Base\\Fields\\Radio',
+                'live' => true,
+                'options' => [
+                    [
+                        'key' => 'rounded',
+                        'value' => 'Rounded',
+                    ],
+                    [
+                        'key' => 'subtle',
+                        'value' => 'Subtle',
+                    ],
+                    [
+                        'key' => 'square',
+                        'value' => 'Square',
+                    ],
+                ],
+                'slug' => 'corner-radius',
+                'default' => 'rounded',
+                'style' => [
+                    'width' => '50',
+                ],
             ],
             [
                 'type' => 'Aura\\Base\\Fields\\Panel',
@@ -497,6 +573,18 @@ class Settings extends Component
         });
     }
 
+    #[Computed]
+    public function hasAppearanceChanges(): bool
+    {
+        foreach ($this->savedAppearance as $slug => $value) {
+            if (($this->form['fields'][$slug] ?? null) !== $value) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function mount(SettingsRegistry $registry, SettingsStore $store, string $page = 'general')
     {
         abort_unless(config('aura.features.settings') && $registry->has($page), 404);
@@ -512,6 +600,8 @@ class Settings extends Component
             'gray-color-palette' => config('aura.theme.gray-color-palette'),
             'sidebar-size' => config('aura.theme.sidebar-size'),
             'sidebar-darkmode-type' => config('aura.theme.sidebar-darkmode-type'),
+            'interface-density' => config('aura.theme.interface-density'),
+            'corner-radius' => config('aura.theme.corner-radius'),
         ];
 
         $this->model = $store->findOrCreate($valueString);
@@ -537,6 +627,8 @@ class Settings extends Component
 
             return [$slug => $stored[$slug] ?? $defaults[$slug] ?? ''];
         })->toArray();
+
+        $this->rememberSavedAppearance();
 
         $this->model->setAttribute('value', Arr::except($stored, [...$registry->secretFields(), '_secret_contexts']));
     }
@@ -570,6 +662,8 @@ class Settings extends Component
 
         $this->model->setAttribute('value', Arr::except($stored, [...$registry->secretFields(), '_secret_contexts']));
 
+        $this->rememberSavedAppearance();
+
         $this->dispatch('notify', message: __('Successfully updated'), type: 'success');
     }
 
@@ -593,5 +687,10 @@ class Settings extends Component
         $user = auth()->user();
 
         abort_unless($user && method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin(), 403);
+    }
+
+    private function rememberSavedAppearance(): void
+    {
+        $this->savedAppearance = Arr::only($this->form['fields'], self::APPEARANCE_FIELDS);
     }
 }

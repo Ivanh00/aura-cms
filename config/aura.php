@@ -192,6 +192,8 @@ return [
         'sidebar-size' => 'standard',
         'sidebar-type' => 'dark',
         'sidebar-darkmode-type' => 'dark',
+        'interface-density' => 'comfortable',
+        'corner-radius' => 'rounded',
 
         'login-bg' => false,
         'login-bg-darkmode' => false,
