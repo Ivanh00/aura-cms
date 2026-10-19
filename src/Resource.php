@@ -388,12 +388,12 @@ class Resource extends Model implements DefinesFields, TableResource
             return $this->{$key};
         }
 
-        if ($class && isset($this->attributes[$key]) && method_exists($class, 'get')) {
-            return $class->get($class, $this->attributes[$key], $field);
+        if ($class && array_key_exists($key, $this->attributes) && method_exists($class, 'get')) {
+            return $class->get($class, $this->getAttribute($key), $field);
         }
 
-        if (isset($this->attributes[$key])) {
-            return $this->attributes[$key];
+        if (array_key_exists($key, $this->attributes)) {
+            return $this->getAttribute($key);
         }
 
         $method = 'get'.Str::studly($key).'Field';

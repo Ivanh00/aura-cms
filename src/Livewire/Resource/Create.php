@@ -242,9 +242,11 @@ class Create extends Component
                 fn ($key) => method_exists($this->model, 'set'.Str::studly((string) $key).'Field')
             ));
 
-        return $fields
+        $attributes = $fields
             ->only($allowed->all())
             ->except(['id', 'type', 'team_id', 'user_id', 'current_team_id'])
             ->all();
+
+        return $this->dehydrateCustomTableFormFields($attributes);
     }
 }

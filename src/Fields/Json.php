@@ -8,6 +8,18 @@ class Json extends Field
 
     public $view = 'aura::fields.json-view';
 
+    /**
+     * Convert validated JSON editor text back to its native PHP value.
+     */
+    public function dehydrate($value, $field = null)
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+    }
+
     public function display($field, $value, $model)
     {
         // The encoded payload is database-backed and view-value renders this

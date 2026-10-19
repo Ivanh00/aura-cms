@@ -69,18 +69,15 @@ class Option extends Resource
     }
 
     /**
-     * Accept JSON from the admin editor without storing it as a JSON string.
+     * Encode native values without interpreting application strings as JSON.
      *
-     * Programmatic callers may continue to pass native arrays and scalars. A
-     * valid JSON string from the editor is decoded first so the model's array
-     * cast returns the original nesting and scalar types after a reload.
+     * JSON editor input is parsed by the field dehydration step before model
+     * assignment. Keeping this mutator encoding-only preserves strings such
+     * as "true" and "[]", while representing a native null as JSON `null`
+     * for the non-nullable value column.
      */
     public function setValueAttribute($value): void
     {
-        if (is_string($value) && json_validate($value)) {
-            $value = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        }
-
         $this->attributes['value'] = json_encode(
             $value,
             JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR

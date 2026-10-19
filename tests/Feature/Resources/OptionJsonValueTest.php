@@ -86,3 +86,36 @@ it('keeps native scalar option values usable through an unchanged form save', fu
     'integer' => [2, '2'],
     'boolean' => [true, 'true'],
 ]);
+
+it('preserves JSON-looking strings written by application code', function (string $value) {
+    $option = Option::create([
+        'name' => 'native-string-option',
+        'value' => 'initial',
+    ]);
+
+    $option->update(['value' => $value]);
+
+    expect($option->fresh()->value)->toBeString()->toBe($value);
+})->with([
+    'boolean-looking string' => ['true'],
+    'number-looking string' => ['2'],
+    'array-looking string' => ['[]'],
+    'null-looking string' => ['null'],
+]);
+
+it('preserves JSON null through an unchanged edit save and reopen', function () {
+    $option = Option::create([
+        'name' => 'null-option',
+        'value' => null,
+    ]);
+
+    Livewire::test(Edit::class, ['slug' => 'option', 'id' => $option->id])
+        ->assertSet('form.fields.value', 'null')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($option->fresh()->value)->toBeNull();
+
+    Livewire::test(Edit::class, ['slug' => 'option', 'id' => $option->id])
+        ->assertSet('form.fields.value', 'null');
+});

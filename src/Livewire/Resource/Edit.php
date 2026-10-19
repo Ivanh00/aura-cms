@@ -59,7 +59,7 @@ class Edit extends Component
         foreach ($this->model->inputFields() as $field) {
 
             // If the method exists in the field type, call it directly.
-            if (method_exists($field['field'], 'hydrate') && isset($this->form['fields'][$field['slug']])) {
+            if (method_exists($field['field'], 'hydrate') && array_key_exists($field['slug'], $this->form['fields'])) {
                 // dd('hier');
                 $this->form['fields'][$field['slug']] = $field['field']->hydrate($this->form['fields'][$field['slug']], $field);
             }
@@ -243,9 +243,11 @@ class Edit extends Component
                 fn ($key) => method_exists($this->model, 'set'.Str::studly((string) $key).'Field')
             ));
 
-        return $fields
+        $attributes = $fields
             ->only($allowed->all())
             ->except(['id', 'type', 'team_id', 'user_id', 'current_team_id'])
             ->all();
+
+        return $this->dehydrateCustomTableFormFields($attributes);
     }
 }

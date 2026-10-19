@@ -65,6 +65,16 @@ describe('Json Field Value Handling', function () {
 JSON);
     });
 
+    test('dehydrate parses validated editor JSON to native values', function () {
+        $field = new Json;
+
+        expect($field->dehydrate('{"nested":{"enabled":true}}'))->toBe([
+            'nested' => ['enabled' => true],
+        ])
+            ->and($field->dehydrate('null'))->toBeNull()
+            ->and($field->dehydrate('"true"'))->toBe('true');
+    });
+
     test('display pretty prints and escapes JSON', function () {
         $field = new Json;
 
