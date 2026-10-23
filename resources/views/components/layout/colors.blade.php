@@ -8,6 +8,8 @@
     $lightColors = \Aura\Base\ThemeTokens::colors($settings, 'light');
     $darkColors = \Aura\Base\ThemeTokens::colors($settings, 'dark');
     $designTokens = \Aura\Base\ThemeTokens::design($settings);
+    $lightSidebarColors = \Aura\Base\ThemeTokens::sidebarColors($settings, 'light');
+    $darkSidebarColors = \Aura\Base\ThemeTokens::sidebarColors($settings, 'dark');
     $colorScope = $colorScope ?? ':root';
     $darkColorScope = $darkColorScope ?? '.dark';
     $includeColorHelpers = $includeColorHelpers ?? true;
@@ -1079,6 +1081,10 @@
         @foreach ($variables as $key => $value)
             {{ $key }}: {{ $value }};
         @endforeach
+
+        @foreach ($lightSidebarColors as $key => $value)
+            {{ $key }}: {{ $value }};
+        @endforeach
     }
 
     {!! $colorScope !!} {
@@ -1090,6 +1096,10 @@
     {!! $darkColorScope !!} {
         @foreach ($darkColors as $key => $value)
             --aura-color-{{ $key }}: {{ $value }};
+        @endforeach
+
+        @foreach ($darkSidebarColors as $key => $value)
+            {{ $key }}: {{ $value }};
         @endforeach
     }
 </style>

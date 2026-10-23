@@ -26,6 +26,8 @@ test('theme token defaults expose the stable light and dark contract', function 
         'success' => '22 163 74',
         'warning' => '217 119 6',
         'danger' => '220 38 38',
+        'white' => '255 255 255',
+        'black' => '0 0 0',
     ])->and(config('aura.theme.colors.dark'))->toBe([
         'primary' => 'var(--primary-600)',
         'background' => '9 9 11',
@@ -36,7 +38,40 @@ test('theme token defaults expose the stable light and dark contract', function 
         'success' => '22 163 74',
         'warning' => '217 119 6',
         'danger' => '220 38 38',
+        'white' => '255 255 255',
+        'black' => '0 0 0',
     ]);
+});
+
+test('expert tokens override presets only while expert mode is enabled', function () {
+    $settings = [
+        'appearance-expert-mode' => true,
+        'interface-density' => 'comfortable',
+        'corner-radius' => 'rounded',
+        'sidebar-size' => 'standard',
+        'expert-panel-radius' => 0,
+        'expert-section-gap' => 7,
+        'expert-light-color-background' => '#fefdfc',
+        'expert-dark-color-text' => '#abcdef',
+        'expert-light-sidebar-background' => '#112233',
+        'expert-dark-sidebar-icon-hover' => '#445566',
+    ];
+
+    expect(ThemeTokens::design($settings))
+        ->toMatchArray([
+            '--aura-panel-radius' => '0px',
+            '--aura-section-gap' => '7px',
+        ])
+        ->and(ThemeTokens::colors($settings, 'light')['background'])->toBe('254 253 252')
+        ->and(ThemeTokens::colors($settings, 'dark')['text'])->toBe('171 205 239')
+        ->and(ThemeTokens::sidebarColors($settings, 'light')['--sidebar-bg'])->toBe('17 34 51')
+        ->and(ThemeTokens::sidebarColors($settings, 'dark')['--sidebar-icon-hover'])->toBe('68 85 102');
+
+    $settings['appearance-expert-mode'] = false;
+
+    expect(ThemeTokens::design($settings)['--aura-panel-radius'])->toBe('0.75rem')
+        ->and(ThemeTokens::colors($settings, 'light')['background'])->toBe('255 255 255')
+        ->and(ThemeTokens::sidebarColors($settings, 'light'))->toBe([]);
 });
 
 test('renderer emits the semantic variables for both color schemes', function () {

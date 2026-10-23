@@ -71,7 +71,8 @@ test('saved appearance choices persist', function () {
         ->set('form.fields.sidebar-size', 'dense')
         ->set('form.fields.interface-density', 'compact')
         ->set('form.fields.corner-radius', 'square')
-        ->call('save');
+        ->call('save')
+        ->assertHasNoErrors();
 
     $settings = Option::firstOrFail()->value;
 
@@ -115,7 +116,67 @@ test('Default Team Settings are created', function () {
     $this->assertIsArray($option->value);
 
     // assertJSON option value matches expected JSON structure
-    $this->assertJsonStringEqualsJsonString(json_encode($option->value), '{"darkmode-type":"auto","sidebar-type":"dark","color-palette":"aura","gray-color-palette":"slate","sidebar-size":"standard","sidebar-darkmode-type":"dark","interface-density":"comfortable","corner-radius":"rounded"}');
+    $this->assertJsonStringEqualsJsonString(json_encode($option->value), '{"darkmode-type":"auto","sidebar-type":"dark","color-palette":"aura","gray-color-palette":"slate","sidebar-size":"standard","sidebar-darkmode-type":"dark","interface-density":"comfortable","corner-radius":"rounded","appearance-expert-mode":false}');
+});
+
+test('custom palettes and expert appearance changes can be discarded or persisted', function () {
+    $component = Livewire::test(Settings::class)
+        ->set('form.fields.color-palette', 'custom')
+        ->set('form.fields.primary-50', '#fefefe')
+        ->set('form.fields.gray-color-palette', 'custom')
+        ->set('form.fields.gray-50', '#ededed')
+        ->assertSee('Unsaved changes')
+        ->call('discardAppearanceChanges')
+        ->assertSet('form.fields.color-palette', 'aura')
+        ->assertSet('form.fields.primary-50', '')
+        ->assertSet('form.fields.gray-color-palette', 'slate')
+        ->assertSet('form.fields.gray-50', '')
+        ->assertDontSee('Unsaved changes')
+        ->set('form.fields.appearance-expert-mode', true)
+        ->set('form.fields.expert-panel-radius', 0)
+        ->set('form.fields.expert-section-gap', 7)
+        ->set('form.fields.expert-light-color-background', '#fefdfc')
+        ->set('form.fields.expert-dark-sidebar-icon-hover', '#abcdef')
+        ->assertSee('Unsaved changes')
+        ->assertSee('--aura-panel-radius: 0px;')
+        ->assertSee('--aura-section-gap: 7px;')
+        ->assertSee('--aura-color-background: 254 253 252;')
+        ->assertSee('--sidebar-icon-hover: 171 205 239;')
+        ->call('save')
+        ->assertHasNoErrors()
+        ->assertDontSee('Unsaved changes');
+
+    $settings = Option::firstOrFail()->value;
+
+    expect($settings['appearance-expert-mode'])->toBeTrue()
+        ->and($settings['expert-panel-radius'])->toBe(0)
+        ->and($settings['expert-section-gap'])->toBe(7)
+        ->and($settings['expert-light-color-background'])->toBe('#fefdfc')
+        ->and($settings['expert-dark-sidebar-icon-hover'])->toBe('#abcdef');
+
+    Livewire::test(Settings::class)
+        ->assertSet('form.fields.appearance-expert-mode', true)
+        ->assertSet('form.fields.expert-panel-radius', 0)
+        ->assertSet('form.fields.expert-section-gap', 7)
+        ->assertSet('form.fields.expert-light-color-background', '#fefdfc')
+        ->assertSet('form.fields.expert-dark-sidebar-icon-hover', '#abcdef')
+        ->set('form.fields.expert-section-gap', 13)
+        ->call('discardAppearanceChanges')
+        ->assertSet('form.fields.expert-section-gap', 7)
+        ->assertDontSee('Unsaved changes');
+});
+
+test('expert appearance validates colors and restores defaults', function () {
+    Livewire::test(Settings::class)
+        ->set('form.fields.appearance-expert-mode', true)
+        ->set('form.fields.expert-light-color-primary', 'not-a-color')
+        ->call('save')
+        ->assertHasErrors(['form.fields.expert-light-color-primary' => 'regex'])
+        ->set('form.fields.expert-light-color-primary', '#112233')
+        ->set('form.fields.expert-panel-radius', 0)
+        ->call('restoreExpertDefaults')
+        ->assertSet('form.fields.expert-light-color-primary', '#1f55e9')
+        ->assertSet('form.fields.expert-panel-radius', 12);
 });
 
 test('Team Settings can be saved2', function () {

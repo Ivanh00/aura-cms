@@ -1,4 +1,4 @@
-<div>
+<div class="flex flex-col aura-sidebar-groups">
 @php
    
 @endphp

@@ -43,6 +43,8 @@ module.exports = {
                 countdown: 'countdown 3s linear 1',
             },
             colors: {
+                white: withOpacityValue('--aura-color-white'),
+                black: withOpacityValue('--aura-color-black'),
                 aura: {
                     primary: withOpacityValue('--aura-color-primary'),
                     background: withOpacityValue('--aura-color-background'),
@@ -53,6 +55,8 @@ module.exports = {
                     success: withOpacityValue('--aura-color-success'),
                     warning: withOpacityValue('--aura-color-warning'),
                     danger: withOpacityValue('--aura-color-danger'),
+                    white: withOpacityValue('--aura-color-white'),
+                    black: withOpacityValue('--aura-color-black'),
                 },
                 sidebar: {
                     'bg' : withOpacityValue('--sidebar-bg'),
@@ -74,6 +78,7 @@ module.exports = {
                     '700': withOpacityValue('--primary-700'),
                     '800': withOpacityValue('--primary-800'),
                     '900': withOpacityValue('--primary-900'),
+                    '950': withOpacityValue('--primary-950'),
                 },
 
                 gray: {
@@ -88,6 +93,7 @@ module.exports = {
                     '700': withOpacityValue('--gray-700'),
                     '800': withOpacityValue('--gray-800'),
                     '900': withOpacityValue('--gray-900'),
+                    '950': withOpacityValue('--gray-950'),
                 }
             },
             fontFamily: {

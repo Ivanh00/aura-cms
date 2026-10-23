@@ -15,6 +15,23 @@ final class ThemeTokens
         'success',
         'warning',
         'danger',
+        'white',
+        'black',
+    ];
+
+    /** @var array<string, string> */
+    private const DESIGN_OVERRIDES = [
+        'expert-panel-radius' => '--aura-panel-radius',
+        'expert-control-radius' => '--aura-control-radius',
+        'expert-panel-padding' => '--aura-panel-padding',
+        'expert-panel-small-padding' => '--aura-panel-small-padding',
+        'expert-layout-gap' => '--aura-layout-gap',
+        'expert-section-gap' => '--aura-section-gap',
+        'expert-sidebar-item-height' => '--aura-sidebar-item-height',
+        'expert-sidebar-item-padding-x' => '--aura-sidebar-item-padding-x',
+        'expert-sidebar-group-gap' => '--aura-sidebar-group-gap',
+        'expert-sidebar-heading-gap' => '--aura-sidebar-heading-gap',
+        'expert-sidebar-icon-size' => '--aura-sidebar-icon-size',
     ];
 
     /** @var list<string> */
@@ -32,6 +49,16 @@ final class ThemeTokens
         'math',
         'emoji',
         'fangsong',
+    ];
+
+    /** @var array<string, string> */
+    private const SIDEBAR_COLOR_NAMES = [
+        'background' => '--sidebar-bg',
+        'hover' => '--sidebar-bg-hover',
+        'dropdown' => '--sidebar-bg-dropdown',
+        'text' => '--sidebar-text',
+        'icon' => '--sidebar-icon',
+        'icon-hover' => '--sidebar-icon-hover',
     ];
 
     /** @var array<string, mixed>|null */
@@ -54,10 +81,12 @@ final class ThemeTokens
         $colors = [];
 
         foreach (self::COLOR_NAMES as $name) {
-            $configuredValue = $configuredColors[$name] ?? null;
-            $colors[$name] = self::isColorValue($configuredValue)
-                ? trim($configuredValue)
-                : $packageColors[$name];
+            $expertValue = self::expertEnabled($theme)
+                ? ($theme["expert-{$mode}-color-{$name}"] ?? null)
+                : null;
+            $colors[$name] = self::normalizeColor($expertValue)
+                ?? self::normalizeColor($configuredColors[$name] ?? null)
+                ?? $packageColors[$name];
         }
 
         return $colors;
@@ -80,11 +109,13 @@ final class ThemeTokens
                 '--aura-panel-padding' => '1rem',
                 '--aura-panel-small-padding' => '0.375rem',
                 '--aura-layout-gap' => '1rem',
+                '--aura-section-gap' => '0.75rem',
             ],
             default => [
                 '--aura-panel-padding' => '1.25rem',
                 '--aura-panel-small-padding' => '0.5rem',
                 '--aura-layout-gap' => '1.5rem',
+                '--aura-section-gap' => '1rem',
             ],
         };
 
@@ -108,23 +139,38 @@ final class ThemeTokens
                 '--aura-sidebar-item-height' => '1.75rem',
                 '--aura-sidebar-item-padding-x' => '0.375rem',
                 '--aura-sidebar-icon-size' => '1rem',
+                '--aura-sidebar-group-gap' => '0.125rem',
                 '--aura-sidebar-heading-gap' => '0.625rem',
             ],
             'compact' => [
                 '--aura-sidebar-item-height' => '2rem',
                 '--aura-sidebar-item-padding-x' => '0.5rem',
                 '--aura-sidebar-icon-size' => '1.125rem',
+                '--aura-sidebar-group-gap' => '0.25rem',
                 '--aura-sidebar-heading-gap' => '0.875rem',
             ],
             default => [
                 '--aura-sidebar-item-height' => '2.25rem',
                 '--aura-sidebar-item-padding-x' => '0.75rem',
                 '--aura-sidebar-icon-size' => '1.25rem',
+                '--aura-sidebar-group-gap' => '0.25rem',
                 '--aura-sidebar-heading-gap' => '1.25rem',
             ],
         };
 
-        return [...$densityTokens, ...$radiusTokens, ...$sidebarTokens];
+        $tokens = [...$densityTokens, ...$radiusTokens, ...$sidebarTokens];
+
+        if (! self::expertEnabled($theme)) {
+            return $tokens;
+        }
+
+        foreach (self::DESIGN_OVERRIDES as $setting => $variable) {
+            if ($value = self::pixelValue($theme[$setting] ?? null)) {
+                $tokens[$variable] = $value;
+            }
+        }
+
+        return $tokens;
     }
 
     /**
@@ -202,6 +248,36 @@ final class ThemeTokens
             self::merge($packageTheme, $configuredTheme),
             $storedSettings,
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $theme
+     * @return array<string, string>
+     */
+    public static function sidebarColors(array $theme, string $mode): array
+    {
+        if (! self::expertEnabled($theme)) {
+            return [];
+        }
+
+        $mode = $mode === 'dark' ? 'dark' : 'light';
+        $colors = [];
+
+        foreach (self::SIDEBAR_COLOR_NAMES as $name => $variable) {
+            $value = self::normalizeColor($theme["expert-{$mode}-sidebar-{$name}"] ?? null);
+
+            if ($value !== null) {
+                $colors[$variable] = $value;
+            }
+        }
+
+        return $colors;
+    }
+
+    /** @param array<string, mixed> $theme */
+    private static function expertEnabled(array $theme): bool
+    {
+        return filter_var($theme['appearance-expert-mode'] ?? false, FILTER_VALIDATE_BOOL);
     }
 
     private static function formatFontFamily(mixed $family): ?string
@@ -288,6 +364,21 @@ final class ThemeTokens
         return $base;
     }
 
+    private static function normalizeColor(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
+
+        if (preg_match('/^#[0-9a-f]{6}$/i', $value) === 1) {
+            return TransformColor::hexToRgb($value);
+        }
+
+        return self::isColorValue($value) ? $value : null;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -304,5 +395,16 @@ final class ThemeTokens
         $theme = $configuration['theme'];
 
         return self::$packageTheme = $theme;
+    }
+
+    private static function pixelValue(mixed $value): ?string
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $value = (int) $value;
+
+        return $value >= 0 && $value <= 96 ? $value.'px' : null;
     }
 }

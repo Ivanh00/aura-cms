@@ -1,8 +1,12 @@
 <x-aura::fields.wrapper :field="$field">
     @if (optional(optional($field)['options'])['native'])
-        <div class="relative right-4 left-4 bottom-6 z-20 md:relative md:inset-0"
+        <div class="relative z-20"
             x-data="{
-                color: $wire.entangle('form.fields.{{ optional($field)['slug'] }}'),
+                @if (optional($field)['live'] === true)
+                    color: $wire.entangle('form.fields.{{ optional($field)['slug'] }}').live,
+                @else
+                    color: $wire.entangle('form.fields.{{ optional($field)['slug'] }}'),
+                @endif
                 init () {
                     // watch color for changes  and update the input
                     this.$watch('color', value => {
@@ -28,7 +32,11 @@
 
     <div wire:ignore class="flex items-center"
         x-data="{
-            selectedColor: $wire.entangle('form.fields.{{ optional($field)['slug'] }}'),
+            @if (optional($field)['live'] === true)
+                selectedColor: $wire.entangle('form.fields.{{ optional($field)['slug'] }}').live,
+            @else
+                selectedColor: $wire.entangle('form.fields.{{ optional($field)['slug'] }}'),
+            @endif
             isDisabled: {{ $field['field']->isDisabled($this->form, $field) ? 'true' : 'false' }},
             init() {
                 // Simple example, see optional options for more configuration.

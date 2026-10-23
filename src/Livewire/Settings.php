@@ -18,7 +18,7 @@ class Settings extends Component
     use MediaFields;
 
     /** @var list<string> */
-    private const APPEARANCE_FIELDS = [
+    private const APPEARANCE_PRESET_FIELDS = [
         'color-palette',
         'gray-color-palette',
         'sidebar-size',
@@ -27,6 +27,7 @@ class Settings extends Component
         'sidebar-darkmode-type',
         'interface-density',
         'corner-radius',
+        'appearance-expert-mode',
     ];
 
     public ?array $aiConnectionStatus = null;
@@ -42,6 +43,27 @@ class Settings extends Component
     public array $savedAppearance = [];
 
     public array $secretConfigured = [];
+
+    /** @return list<string> */
+    public static function appearanceFieldSlugs(): array
+    {
+        $expertSlugs = collect(self::expertAppearanceFields())
+            ->pluck('slug')
+            ->filter(fn (string $slug): bool => ! str_starts_with($slug, 'panel-') && ! str_starts_with($slug, 'group-'))
+            ->values()
+            ->all();
+        $paletteSlugs = collect(self::generalFields())
+            ->pluck('slug')
+            ->filter(fn (string $slug): bool => preg_match('/^(primary|gray)-\d+$/', $slug) === 1)
+            ->values()
+            ->all();
+
+        return array_values(array_unique([
+            ...self::APPEARANCE_PRESET_FIELDS,
+            ...$paletteSlugs,
+            ...$expertSlugs,
+        ]));
+    }
 
     public function boot(): void
     {
@@ -63,7 +85,7 @@ class Settings extends Component
 
     public static function generalFields()
     {
-        return [
+        $fields = [
             [
                 'type' => 'Aura\\Base\\Fields\\Panel',
                 'name' => 'Appearance',
@@ -552,6 +574,16 @@ class Settings extends Component
             ],
 
         ];
+
+        $fields = collect($fields)->map(function (array $field): array {
+            if (preg_match('/^(primary|gray)-\d+$/', $field['slug'] ?? '') === 1) {
+                $field['live'] = true;
+            }
+
+            return $field;
+        })->all();
+
+        return [...$fields, ...self::expertAppearanceFields()];
     }
 
     public static function getFields()
@@ -602,6 +634,7 @@ class Settings extends Component
             'sidebar-darkmode-type' => config('aura.theme.sidebar-darkmode-type'),
             'interface-density' => config('aura.theme.interface-density'),
             'corner-radius' => config('aura.theme.corner-radius'),
+            'appearance-expert-mode' => config('aura.theme.appearance-expert-mode', false),
         ];
 
         $this->model = $store->findOrCreate($valueString);
@@ -636,6 +669,13 @@ class Settings extends Component
     public function render()
     {
         return view('aura::livewire.settings')->layout('aura::components.layout.app');
+    }
+
+    public function restoreExpertDefaults(): void
+    {
+        foreach (self::expertDefaults() as $slug => $value) {
+            $this->form['fields'][$slug] = $value;
+        }
     }
 
     public function rules()
@@ -689,8 +729,150 @@ class Settings extends Component
         abort_unless($user && method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin(), 403);
     }
 
+    /** @return list<array<string, mixed>> */
+    private static function expertAppearanceFields(): array
+    {
+        $condition = static fn ($model, $form): bool => (bool) ($form['fields']['appearance-expert-mode'] ?? false);
+        $fields = [
+            [
+                'type' => 'Aura\\Base\\Fields\\Panel',
+                'name' => 'Expert Appearance',
+                'slug' => 'panel-theme-expert',
+                'style' => ['width' => '100'],
+            ],
+            [
+                'name' => 'Expert mode',
+                'instructions' => 'Fine-tune shared design tokens. Disable this to use the selected presets unchanged.',
+                'type' => 'Aura\\Base\\Fields\\Boolean',
+                'slug' => 'appearance-expert-mode',
+                'default' => false,
+                'live' => true,
+            ],
+            [
+                'type' => 'Aura\\Base\\Fields\\Group',
+                'name' => 'Expert spacing and sizes',
+                'slug' => 'group-theme-expert-sizing',
+                'conditional_logic' => $condition,
+            ],
+        ];
+
+        $numericLabels = [
+            'expert-panel-radius' => 'Panel radius',
+            'expert-control-radius' => 'Button and control radius',
+            'expert-panel-padding' => 'Panel padding',
+            'expert-panel-small-padding' => 'Small panel padding',
+            'expert-layout-gap' => 'Layout gap',
+            'expert-section-gap' => 'Section gap',
+            'expert-sidebar-item-height' => 'Sidebar item height',
+            'expert-sidebar-item-padding-x' => 'Sidebar horizontal padding',
+            'expert-sidebar-group-gap' => 'Sidebar group gap',
+            'expert-sidebar-heading-gap' => 'Sidebar heading gap',
+            'expert-sidebar-icon-size' => 'Sidebar icon size',
+        ];
+        $defaults = self::expertDefaults();
+
+        foreach ($numericLabels as $slug => $name) {
+            $fields[] = [
+                'name' => $name,
+                'type' => 'Aura\\Base\\Fields\\Number',
+                'slug' => $slug,
+                'suffix' => 'px',
+                'default' => $defaults[$slug],
+                'validation' => 'required|integer|min:0|max:96',
+                'live' => true,
+                'conditional_logic' => $condition,
+                'style' => ['width' => '25'],
+            ];
+        }
+
+        $colorGroups = [
+            'light-color' => ['Light semantic colors', ['primary', 'background', 'panel', 'border', 'text', 'muted', 'success', 'warning', 'danger', 'white', 'black']],
+            'dark-color' => ['Dark semantic colors', ['primary', 'background', 'panel', 'border', 'text', 'muted', 'success', 'warning', 'danger', 'white', 'black']],
+            'light-sidebar' => ['Light sidebar colors', ['background', 'hover', 'dropdown', 'text', 'icon', 'icon-hover']],
+            'dark-sidebar' => ['Dark sidebar colors', ['background', 'hover', 'dropdown', 'text', 'icon', 'icon-hover']],
+        ];
+
+        foreach ($colorGroups as $prefix => [$label, $names]) {
+            $fields[] = [
+                'type' => 'Aura\\Base\\Fields\\Group',
+                'name' => $label,
+                'slug' => 'group-theme-expert-'.$prefix,
+                'conditional_logic' => $condition,
+            ];
+
+            foreach ($names as $name) {
+                $slug = 'expert-'.$prefix.'-'.$name;
+                $fields[] = [
+                    'name' => str($name)->replace('-', ' ')->headline()->toString(),
+                    'type' => 'Aura\\Base\\Fields\\Color',
+                    'slug' => $slug,
+                    'default' => $defaults[$slug],
+                    'validation' => 'required|regex:/^#[0-9a-fA-F]{6}$/',
+                    'live' => true,
+                    'conditional_logic' => $condition,
+                    'options' => ['native' => true],
+                    'style' => ['width' => '25'],
+                ];
+            }
+        }
+
+        return $fields;
+    }
+
+    /** @return array<string, string|int> */
+    private static function expertDefaults(): array
+    {
+        return [
+            'expert-panel-radius' => 12,
+            'expert-control-radius' => 8,
+            'expert-panel-padding' => 20,
+            'expert-panel-small-padding' => 8,
+            'expert-layout-gap' => 24,
+            'expert-section-gap' => 16,
+            'expert-sidebar-item-height' => 36,
+            'expert-sidebar-item-padding-x' => 12,
+            'expert-sidebar-group-gap' => 4,
+            'expert-sidebar-heading-gap' => 20,
+            'expert-sidebar-icon-size' => 20,
+            'expert-light-color-primary' => '#1f55e9',
+            'expert-light-color-background' => '#ffffff',
+            'expert-light-color-panel' => '#fafafa',
+            'expert-light-color-border' => '#e4e4e7',
+            'expert-light-color-text' => '#18181b',
+            'expert-light-color-muted' => '#52525b',
+            'expert-light-color-success' => '#16a34a',
+            'expert-light-color-warning' => '#d97706',
+            'expert-light-color-danger' => '#dc2626',
+            'expert-light-color-white' => '#ffffff',
+            'expert-light-color-black' => '#000000',
+            'expert-dark-color-primary' => '#1f55e9',
+            'expert-dark-color-background' => '#09090b',
+            'expert-dark-color-panel' => '#18181b',
+            'expert-dark-color-border' => '#3f3f46',
+            'expert-dark-color-text' => '#f4f4f5',
+            'expert-dark-color-muted' => '#a1a1aa',
+            'expert-dark-color-success' => '#16a34a',
+            'expert-dark-color-warning' => '#d97706',
+            'expert-dark-color-danger' => '#dc2626',
+            'expert-dark-color-white' => '#ffffff',
+            'expert-dark-color-black' => '#000000',
+            'expert-light-sidebar-background' => '#1643d7',
+            'expert-light-sidebar-hover' => '#1f55e9',
+            'expert-light-sidebar-dropdown' => '#1236b9',
+            'expert-light-sidebar-text' => '#6894f6',
+            'expert-light-sidebar-icon' => '#95b5f9',
+            'expert-light-sidebar-icon-hover' => '#c2d5fb',
+            'expert-dark-sidebar-background' => '#1643d7',
+            'expert-dark-sidebar-hover' => '#1f55e9',
+            'expert-dark-sidebar-dropdown' => '#1236b9',
+            'expert-dark-sidebar-text' => '#6894f6',
+            'expert-dark-sidebar-icon' => '#95b5f9',
+            'expert-dark-sidebar-icon-hover' => '#c2d5fb',
+        ];
+    }
+
     private function rememberSavedAppearance(): void
     {
-        $this->savedAppearance = Arr::only($this->form['fields'], self::APPEARANCE_FIELDS);
+        $this->savedAppearance = Arr::only($this->form['fields'], self::appearanceFieldSlugs());
     }
 }

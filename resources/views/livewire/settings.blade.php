@@ -22,6 +22,11 @@
         </div>
 
         <div class="flex gap-2 items-center">
+            @if($page === 'general' && ($form['fields']['appearance-expert-mode'] ?? false))
+                <x-aura::button.border size="sm" wire:click="restoreExpertDefaults">
+                    {{ __('Restore expert defaults') }}
+                </x-aura::button.border>
+            @endif
             @if($page === 'general' && $this->hasAppearanceChanges)
                 <span class="text-xs font-medium text-amber-700 dark:text-amber-300">
                     {{ __('Unsaved changes') }}
@@ -71,6 +76,8 @@
             data-preview-sidebar-darkmode-type="{{ $appearanceState['sidebarDarkmodeType'] }}"
             data-preview-interface-density="{{ $previewSettings['interface-density'] ?? 'comfortable' }}"
             data-preview-corner-radius="{{ $previewSettings['corner-radius'] ?? 'rounded' }}"
+            data-preview-expert-mode="{{ ($previewSettings['appearance-expert-mode'] ?? false) ? 'true' : 'false' }}"
+            data-preview-panel-radius="{{ $previewSettings['expert-panel-radius'] ?? '' }}"
             class="hidden"
             x-data="{
                 preview: @js($appearanceState),
@@ -113,6 +120,8 @@
                 width: {{ optional(optional($field)['style'])['width'] ?? '100' }}%;
                 @if(optional($field)['type'] === 'Aura\\Base\\Fields\\Panel')
                     margin-bottom: var(--aura-layout-gap, 1rem);
+                @elseif(optional($field)['type'] === 'Aura\\Base\\Fields\\Group')
+                    margin-bottom: var(--aura-section-gap, 1rem);
                 @endif
             }
 
