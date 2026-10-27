@@ -6,6 +6,7 @@ use Aura\Base\Contracts\AiConnector;
 use Aura\Base\Settings\SettingsPage;
 use Aura\Base\Settings\SettingsRegistry;
 use Aura\Base\Settings\SettingsStore;
+use Aura\Base\ThemeTokens;
 use Aura\Base\Traits\InputFields;
 use Aura\Base\Traits\MediaFields;
 use Illuminate\Support\Arr;
@@ -673,7 +674,7 @@ class Settings extends Component
 
     public function restoreExpertDefaults(): void
     {
-        foreach (self::expertDefaults() as $slug => $value) {
+        foreach ($this->expertPresetValues() as $slug => $value) {
             $this->form['fields'][$slug] = $value;
         }
     }
@@ -722,6 +723,51 @@ class Settings extends Component
         $this->dispatch('notify', message: $result->message, type: $result->successful ? 'success' : 'error');
     }
 
+    public function updated(string $property, mixed $value): void
+    {
+        if ($this->page !== 'general') {
+            return;
+        }
+
+        if ($property === 'form.fields.appearance-expert-mode' && filter_var($value, FILTER_VALIDATE_BOOL)) {
+            $this->applyExpertPresetValues();
+
+            return;
+        }
+
+        if (! filter_var($this->form['fields']['appearance-expert-mode'] ?? false, FILTER_VALIDATE_BOOL)) {
+            return;
+        }
+
+        $slugs = match ($property) {
+            'form.fields.color-palette',
+            'form.fields.primary-200',
+            'form.fields.primary-300',
+            'form.fields.primary-400',
+            'form.fields.primary-500',
+            'form.fields.primary-600',
+            'form.fields.primary-700' => self::expertColorSlugs(),
+            'form.fields.interface-density' => self::expertDensitySlugs(),
+            'form.fields.corner-radius' => self::expertRadiusSlugs(),
+            'form.fields.sidebar-size' => self::expertSidebarSizeSlugs(),
+            default => [],
+        };
+
+        if ($slugs !== []) {
+            $this->applyExpertPresetValues($slugs);
+        }
+    }
+
+    /** @param list<string>|null $only */
+    private function applyExpertPresetValues(?array $only = null): void
+    {
+        foreach ($this->expertPresetValues() as $slug => $value) {
+            if ($only === null || in_array($slug, $only, true)) {
+                $this->form['fields'][$slug] = $value;
+            }
+        }
+    }
+
     private function authorizeAccess(): void
     {
         $user = auth()->user();
@@ -750,8 +796,10 @@ class Settings extends Component
             ],
             [
                 'type' => 'Aura\\Base\\Fields\\Group',
-                'name' => 'Expert spacing and sizes',
+                'name' => 'Layout and spacing',
                 'slug' => 'group-theme-expert-sizing',
+                'description' => 'Fine-tune panel, control, layout, and sidebar dimensions. All measurements use pixels.',
+                'variant' => 'section',
                 'conditional_logic' => $condition,
             ],
         ];
@@ -786,17 +834,20 @@ class Settings extends Component
         }
 
         $colorGroups = [
-            'light-color' => ['Light semantic colors', ['primary', 'background', 'panel', 'border', 'text', 'muted', 'success', 'warning', 'danger', 'white', 'black']],
-            'dark-color' => ['Dark semantic colors', ['primary', 'background', 'panel', 'border', 'text', 'muted', 'success', 'warning', 'danger', 'white', 'black']],
-            'light-sidebar' => ['Light sidebar colors', ['background', 'hover', 'dropdown', 'text', 'icon', 'icon-hover']],
-            'dark-sidebar' => ['Dark sidebar colors', ['background', 'hover', 'dropdown', 'text', 'icon', 'icon-hover']],
+            'light-color' => ['Light semantic colors', 'Colors used by content, controls, feedback, and surfaces in light mode.', ['primary', 'background', 'panel', 'border', 'text', 'muted', 'success', 'warning', 'danger', 'white', 'black']],
+            'dark-color' => ['Dark semantic colors', 'The matching semantic color set applied when the admin is in dark mode.', ['primary', 'background', 'panel', 'border', 'text', 'muted', 'success', 'warning', 'danger', 'white', 'black']],
+            'light-sidebar' => ['Light sidebar colors', 'Background, interaction, label, and icon colors for the light sidebar.', ['background', 'hover', 'dropdown', 'text', 'icon', 'icon-hover']],
+            'dark-sidebar' => ['Dark sidebar colors', 'Background, interaction, label, and icon colors for the dark sidebar.', ['background', 'hover', 'dropdown', 'text', 'icon', 'icon-hover']],
         ];
 
-        foreach ($colorGroups as $prefix => [$label, $names]) {
+        foreach ($colorGroups as $prefix => [$label, $description, $names]) {
             $fields[] = [
                 'type' => 'Aura\\Base\\Fields\\Group',
                 'name' => $label,
                 'slug' => 'group-theme-expert-'.$prefix,
+                'description' => $description,
+                'variant' => 'section',
+                'exclude_level' => 1,
                 'conditional_logic' => $condition,
             ];
 
@@ -817,6 +868,15 @@ class Settings extends Component
         }
 
         return $fields;
+    }
+
+    /** @return list<string> */
+    private static function expertColorSlugs(): array
+    {
+        return array_values(array_filter(
+            array_keys(self::expertDefaults()),
+            static fn (string $slug): bool => str_contains($slug, '-color-primary') || str_contains($slug, '-sidebar-'),
+        ));
     }
 
     /** @return array<string, string|int> */
@@ -868,6 +928,72 @@ class Settings extends Component
             'expert-dark-sidebar-text' => '#6894f6',
             'expert-dark-sidebar-icon' => '#95b5f9',
             'expert-dark-sidebar-icon-hover' => '#c2d5fb',
+        ];
+    }
+
+    /** @return list<string> */
+    private static function expertDensitySlugs(): array
+    {
+        return [
+            'expert-panel-padding',
+            'expert-panel-small-padding',
+            'expert-layout-gap',
+            'expert-section-gap',
+        ];
+    }
+
+    /** @return array<string, string|int> */
+    private function expertPresetValues(): array
+    {
+        $values = self::expertDefaults();
+        $palette = ThemeTokens::expertPaletteColors($this->form['fields']);
+
+        $density = match ($this->form['fields']['interface-density'] ?? 'comfortable') {
+            'compact' => [16, 6, 16, 12],
+            default => [20, 8, 24, 16],
+        };
+        [$values['expert-panel-padding'], $values['expert-panel-small-padding'], $values['expert-layout-gap'], $values['expert-section-gap']] = $density;
+
+        $radius = match ($this->form['fields']['corner-radius'] ?? 'rounded') {
+            'square' => [0, 0],
+            'subtle' => [6, 4],
+            default => [12, 8],
+        };
+        [$values['expert-panel-radius'], $values['expert-control-radius']] = $radius;
+
+        $sidebar = match ($this->form['fields']['sidebar-size'] ?? 'standard') {
+            'dense' => [28, 6, 2, 10, 16],
+            'compact' => [32, 8, 4, 14, 18],
+            default => [36, 12, 4, 20, 20],
+        };
+        [$values['expert-sidebar-item-height'], $values['expert-sidebar-item-padding-x'], $values['expert-sidebar-group-gap'], $values['expert-sidebar-heading-gap'], $values['expert-sidebar-icon-size']] = $sidebar;
+
+        foreach (['light', 'dark'] as $mode) {
+            $values["expert-{$mode}-color-primary"] = $palette['primary'];
+
+            foreach (['background', 'hover', 'dropdown', 'text', 'icon', 'icon-hover'] as $name) {
+                $values["expert-{$mode}-sidebar-{$name}"] = $palette[$name];
+            }
+        }
+
+        return $values;
+    }
+
+    /** @return list<string> */
+    private static function expertRadiusSlugs(): array
+    {
+        return ['expert-panel-radius', 'expert-control-radius'];
+    }
+
+    /** @return list<string> */
+    private static function expertSidebarSizeSlugs(): array
+    {
+        return [
+            'expert-sidebar-item-height',
+            'expert-sidebar-item-padding-x',
+            'expert-sidebar-group-gap',
+            'expert-sidebar-heading-gap',
+            'expert-sidebar-icon-size',
         ];
     }
 

@@ -179,6 +179,54 @@ test('expert appearance validates colors and restores defaults', function () {
         ->assertSet('form.fields.expert-panel-radius', 12);
 });
 
+test('expert appearance inherits the selected presets when it is enabled', function () {
+    Livewire::test(Settings::class)
+        ->set('form.fields.color-palette', 'red')
+        ->set('form.fields.interface-density', 'compact')
+        ->set('form.fields.corner-radius', 'square')
+        ->set('form.fields.sidebar-size', 'dense')
+        ->set('form.fields.appearance-expert-mode', true)
+        ->assertSet('form.fields.expert-light-color-primary', '#dc2626')
+        ->assertSet('form.fields.expert-dark-color-primary', '#dc2626')
+        ->assertSet('form.fields.expert-light-sidebar-background', '#dc2626')
+        ->assertSet('form.fields.expert-light-sidebar-hover', '#ef4444')
+        ->assertSet('form.fields.expert-light-sidebar-dropdown', '#b91c1c')
+        ->assertSet('form.fields.expert-panel-padding', 16)
+        ->assertSet('form.fields.expert-section-gap', 12)
+        ->assertSet('form.fields.expert-panel-radius', 0)
+        ->assertSet('form.fields.expert-control-radius', 0)
+        ->assertSet('form.fields.expert-sidebar-item-height', 28)
+        ->assertSet('form.fields.expert-sidebar-icon-size', 16);
+});
+
+test('changing a preset in expert mode only refreshes its related expert controls', function () {
+    Livewire::test(Settings::class)
+        ->set('form.fields.appearance-expert-mode', true)
+        ->set('form.fields.expert-light-color-background', '#fefdfc')
+        ->set('form.fields.expert-panel-radius', 3)
+        ->set('form.fields.color-palette', 'emerald')
+        ->assertSet('form.fields.expert-light-color-primary', '#059669')
+        ->assertSet('form.fields.expert-dark-color-primary', '#059669')
+        ->assertSet('form.fields.expert-light-sidebar-background', '#059669')
+        ->assertSet('form.fields.expert-light-color-background', '#fefdfc')
+        ->assertSet('form.fields.expert-panel-radius', 3);
+});
+
+test('custom primary colors are promoted into expert mode', function () {
+    Livewire::test(Settings::class)
+        ->set('form.fields.color-palette', 'custom')
+        ->set('form.fields.primary-200', '#fecaca')
+        ->set('form.fields.primary-300', '#fca5a5')
+        ->set('form.fields.primary-400', '#f87171')
+        ->set('form.fields.primary-500', '#ef4444')
+        ->set('form.fields.primary-600', '#dc2626')
+        ->set('form.fields.primary-700', '#b91c1c')
+        ->set('form.fields.appearance-expert-mode', true)
+        ->assertSet('form.fields.expert-light-color-primary', '#dc2626')
+        ->assertSet('form.fields.expert-light-sidebar-background', '#dc2626')
+        ->assertSet('form.fields.expert-light-sidebar-icon-hover', '#fecaca');
+});
+
 test('Team Settings can be saved2', function () {
     if (! Schema::hasTable('teams')) {
         $this->markTestSkipped('Team tests require the teams schema.');
