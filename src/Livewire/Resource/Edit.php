@@ -94,7 +94,7 @@ class Edit extends Component
         foreach ($this->model->inputFields() as $field) {
 
             // If the method exists in the field type, call it directly.
-            if (method_exists($field['field'], 'hydrate') && isset($this->form['fields'][$field['slug']])) {
+            if (method_exists($field['field'], 'hydrate') && array_key_exists($field['slug'], $this->form['fields'] ?? [])) {
                 // dd('hier');
                 $this->form['fields'][$field['slug']] = $field['field']->hydrate($this->form['fields'][$field['slug']], $field);
             }
@@ -179,7 +179,7 @@ class Edit extends Component
 
         // unset this post fields group
         if ($this->model->usesCustomTable()) {
-            $this->model->update($this->form['fields']);
+            $this->model->update($this->dehydrateCustomTableFormFields($this->form['fields']));
         } else {
             $this->model->update($this->form);
         }
@@ -193,6 +193,7 @@ class Edit extends Component
 
         $this->model = $this->model->refresh();
         $this->form = $this->model->attributesToArray();
+        $this->initializeModelFields();
 
         $this->dispatch('refreshComponent');
     }

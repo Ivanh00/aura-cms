@@ -180,7 +180,7 @@ class Create extends Component
 
         if ($this->model->usesCustomTable()) {
 
-            $model = $this->model->create($this->form['fields']);
+            $model = $this->model->create($this->dehydrateCustomTableFormFields($this->form['fields']));
 
         } else {
 

@@ -5,6 +5,7 @@ namespace Aura\Base\Resources;
 use Aura\Base\Models\Post;
 use Aura\Base\Models\Scopes\TeamScope;
 use Aura\Base\Resource;
+use Illuminate\Support\Facades\Cache;
 
 class Option extends Resource
 {
@@ -31,7 +32,7 @@ class Option extends Resource
         return static::where('name', $name)->first();
     }
 
-    public static function getFields()
+    public static function getFields(): array
     {
         return [
             [
@@ -46,10 +47,11 @@ class Option extends Resource
             ],
             [
                 'name' => 'Value',
-                'type' => 'Aura\\Base\\Fields\\Textarea',
-                'validation' => 'required',
+                'type' => 'Aura\\Base\\Fields\\Json',
+                'validation' => 'required|json',
                 'on_index' => false,
                 'slug' => 'value',
+                'decode' => false,
                 'style' => [
                     'width' => '100',
                 ],
@@ -65,6 +67,22 @@ class Option extends Resource
     public static function getWidgets(): array
     {
         return [];
+    }
+
+    /**
+     * Encode native values without interpreting application strings as JSON.
+     *
+     * JSON editor input is parsed by the field dehydration step before model
+     * assignment. Keeping this mutator encoding-only preserves strings such
+     * as "true" and "[]", while representing a native null as JSON `null`
+     * for the non-nullable value column.
+     */
+    public function setValueAttribute($value): void
+    {
+        $this->attributes['value'] = json_encode(
+            $value,
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+        );
     }
 
     /**
@@ -90,5 +108,36 @@ class Option extends Resource
             unset($option->user_id);
             unset($option->type);
         });
+
+        static::saved(fn ($option) => $option->forgetCachedValue());
+        static::deleted(fn ($option) => $option->forgetCachedValue());
+    }
+
+    /**
+     * Forget the cache entries that readers of this option populate.
+     *
+     * Options edited directly (e.g. in the admin) bypass the helpers that
+     * normally invalidate these keys, so a change would otherwise stay
+     * invisible until the cache expires.
+     */
+    protected function forgetCachedValue(): void
+    {
+        $name = (string) $this->name;
+
+        Cache::forget($name);
+        Cache::forget('aura.'.$name);
+
+        // Aura::getOption() caches team options as "{teamId}.aura.{key}".
+        if (preg_match('/^team\.(\d+)\.(.+)$/', $name, $matches)) {
+            Cache::forget($matches[1].'.aura.'.$matches[2]);
+        }
+
+        // Wildcard lookups (e.g. "user.1.columns.*") cache under their prefix.
+        $segments = explode('.', $name);
+
+        while (count($segments) > 1) {
+            array_pop($segments);
+            Cache::forget(implode('.', $segments).'.*');
+        }
     }
 }
